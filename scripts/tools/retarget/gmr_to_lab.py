@@ -29,6 +29,7 @@ import isaaclab.utils.math as math_utils
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.assets import Articulation, ArticulationCfg, AssetBaseCfg
 from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 
 
 class LoopMode(enum.Enum):
@@ -107,6 +108,17 @@ def run_simulator(
         key_body_names: list[str]):
     
     robot: Articulation = scene["robot"]
+    # marker
+    marker_cfg: VisualizationMarkersCfg = VisualizationMarkersCfg(
+        prim_path="/Visuals/FrameVisualizerFromScript",
+        markers={
+            "red_sphere": sim_utils.SphereCfg(
+                radius=0.03, 
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0))
+            ),
+        }
+    )
+    marker: VisualizationMarkers = VisualizationMarkers(marker_cfg)
     
     # get the motion data
     num_motions = len(motion_data_dicts)
@@ -180,6 +192,11 @@ def run_simulator(
             if count < num_frames:
                 key_body_pos_w_tensor = robot.data.body_pos_w[motion_idx, key_body_indices, :] - scene.env_origins[motion_idx, :3]
                 key_body_pos_w_list[motion_idx][count, :, :] = key_body_pos_w_tensor
+        
+        vis_key_body_pos_w = robot.data.body_pos_w[:, key_body_indices, :]
+        marker.visualize(
+            translations=vis_key_body_pos_w.reshape(-1, 3)
+        )
         
         count += 1
         sim_time += dt
