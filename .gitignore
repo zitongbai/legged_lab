@@ -37,3 +37,7 @@ _build
 
 # mocap data
 **/*.pkl
+
+# Temp folders
+**/temp/
+**/tmp/
