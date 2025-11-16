@@ -12,7 +12,7 @@ Usage example:
         --robot g1 \
         --input_dir data/gmr/ \
         --output_dir data/lab/ \
-        --config_file scripts/tools/retarget/g1_29dof.yaml \
+        --config_file scripts/tools/retarget/config/g1_29dof.yaml \
         --loop clamp
 
 This script intentionally does NOT support start/end frame clipping; it converts full motions.

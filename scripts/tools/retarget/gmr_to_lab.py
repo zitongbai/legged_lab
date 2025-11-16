@@ -14,6 +14,16 @@ GMR Format:
     - 'local_body_pos': Currently unused (can be None)
     - 'link_body_list': Currently unused (can be None)
 
+Output Legged Lab Format:
+    The output Legged Lab format is a dictionary with keys:
+    - 'fps': Frame rate (int)
+    - 'root_pos': Root position array, shape (num_frames, 3)
+    - 'root_rot': Root rotation quaternions, shape (num_frames, 4), format (w, x, y, z)
+    - 'dof_pos': Degrees of freedom positions, shape (num_frames, num_dofs)
+    - 'loop_mode': Loop mode (int, 0 for clamp, 1 for wrap)
+    - 'key_body_pos': Key body positions in world frame, shape (num_frames, num_key_bodies, 3)
+
+
 """
 
 
@@ -204,9 +214,12 @@ def run_simulator(
             break
         
     print(f"[INFO]: Simulation completed in {count} steps, total time: {sim_time:.2f} seconds.")
+    
+    for motion_data_dict, root_quat in zip(motion_data_dicts, root_quat_list):
+        motion_data_dict['root_rot'] = root_quat.cpu().numpy()
         
     for motion_data_dict, key_body_pos_w in zip(motion_data_dicts, key_body_pos_w_list):
-        motion_data_dict['key_body_pos_w'] = key_body_pos_w.cpu().numpy()
+        motion_data_dict['key_body_pos'] = key_body_pos_w.cpu().numpy()
         
     return motion_data_dicts
     
