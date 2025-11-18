@@ -5,8 +5,11 @@ from prettytable import PrettyTable
 from typing import TYPE_CHECKING
 from collections.abc import Sequence
 
+import isaaclab.sim as sim_utils
+import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation
 from isaaclab.managers import ManagerBase, ManagerTermBase
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from .animation_manager_cfg import AnimationTermCfg
 from .motion_data_manager import MotionDataTerm
 
@@ -58,6 +61,17 @@ class AnimationTerm(ManagerTermBase):
         
         if self.cfg.enable_visualization:
             self.vis_root_offset = torch.tensor(self.cfg.vis_root_offset, device=env.device, dtype=torch.float32).unsqueeze(0)  # (1, 3)
+            
+            marker_cfg = VisualizationMarkersCfg(
+                prim_path="/Visuals/KeyBodyVisualizerFromTerm",
+                markers={
+                    "red_sphere": sim_utils.SphereCfg(
+                        radius=0.03, 
+                        visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0))
+                    ),
+                }
+            )
+            self.key_body_marker: VisualizationMarkers = VisualizationMarkers(marker_cfg)
 
     def reset(self, env_ids: Sequence[int] | None = None):
         if env_ids is None:
@@ -152,6 +166,15 @@ class AnimationTerm(ManagerTermBase):
         joint_vel = torch.zeros_like(robot_anim.data.default_joint_vel)
         robot_anim.write_joint_state_to_sim(joint_pos, joint_vel)
             
+        key_body_pos_b = self.key_body_pos_b_buffer[:, 0, :, :]  # (num_envs, num_key_bodies, 3)
+        num_key_bodies = key_body_pos_b.shape[1]
+        key_body_pos_w = root_states[:, :3].unsqueeze(1) + math_utils.quat_apply(
+            root_quat.unsqueeze(1).expand(-1, num_key_bodies, -1),
+            key_body_pos_b
+        )
+        self.key_body_marker.visualize(
+            translations=key_body_pos_w.reshape(-1, 3)
+        )
             
     # Some helper functions
     def get_root_pos_w(self, env_ids: Sequence[int] = None) -> torch.Tensor:
