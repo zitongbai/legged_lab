@@ -20,6 +20,11 @@ if TYPE_CHECKING:
 
 from legged_lab.utils.math import vel_forward_diff, ang_vel_from_quat_diff, quat_slerp, linear_interpolate, calc_frame_blend
 
+# Performance profiling
+ENABLE_PROFILING = False  # Set to True to enable profiling
+_profiler = None
+_profiling_step_count = 0
+
 
 class LoopMode(enum.Enum):
     CLAMP = 0
@@ -292,53 +297,57 @@ class MotionDataTerm(ManagerTermBase):
     #             key_body_pos_w_0, key_body_pos_w_1)
     
     def get_motion_state(self, motion_ids: torch.Tensor, motion_times: torch.Tensor) -> dict[str, torch.Tensor]:
-
-        frame_idx0, frame_idx1, blend = self._calc_frame_blend(motion_ids, motion_times)
-    
-        root_pos_w_0 = self.root_pos_w[frame_idx0]
-        root_pos_w_1 = self.root_pos_w[frame_idx1]
-        root_quat_0 = self.root_quat[frame_idx0]
-        root_quat_1 = self.root_quat[frame_idx1]
-        root_vel_w_0 = self.root_vel_w[frame_idx0]
-        root_vel_w_1 = self.root_vel_w[frame_idx1]
-        root_ang_vel_w_0 = self.root_ang_vel_w[frame_idx0]
-        root_ang_vel_w_1 = self.root_ang_vel_w[frame_idx1]
-        dof_pos_0 = self.dof_pos[frame_idx0]
-        dof_pos_1 = self.dof_pos[frame_idx1]
-        dof_vel_0 = self.dof_vel[frame_idx0]
-        dof_vel_1 = self.dof_vel[frame_idx1]
-        key_body_pos_w_0 = self.key_body_pos_w[frame_idx0]
-        key_body_pos_w_1 = self.key_body_pos_w[frame_idx1]
+        with torch.profiler.record_function("get_motion_state"):
+            with torch.profiler.record_function("calc_frame_blend"):
+                frame_idx0, frame_idx1, blend = self._calc_frame_blend(motion_ids, motion_times)
         
-        # interpolate the values
+            with torch.profiler.record_function("indexing_data"):
+                root_pos_w_0 = self.root_pos_w[frame_idx0]
+                root_pos_w_1 = self.root_pos_w[frame_idx1]
+                root_quat_0 = self.root_quat[frame_idx0]
+                root_quat_1 = self.root_quat[frame_idx1]
+                root_vel_w_0 = self.root_vel_w[frame_idx0]
+                root_vel_w_1 = self.root_vel_w[frame_idx1]
+                root_ang_vel_w_0 = self.root_ang_vel_w[frame_idx0]
+                root_ang_vel_w_1 = self.root_ang_vel_w[frame_idx1]
+                dof_pos_0 = self.dof_pos[frame_idx0]
+                dof_pos_1 = self.dof_pos[frame_idx1]
+                dof_vel_0 = self.dof_vel[frame_idx0]
+                dof_vel_1 = self.dof_vel[frame_idx1]
+                key_body_pos_w_0 = self.key_body_pos_w[frame_idx0]
+                key_body_pos_w_1 = self.key_body_pos_w[frame_idx1]
+            
+            # interpolate the values
+            with torch.profiler.record_function("interpolation"):
+                root_quat = quat_slerp(q0=root_quat_0, q1=root_quat_1, blend=blend)
 
-        root_quat = quat_slerp(q0=root_quat_0, q1=root_quat_1, blend=blend)
+                blend = blend.unsqueeze(-1)  # make it (n, 1) for broadcasting
+                root_pos_w = torch.lerp(root_pos_w_0, root_pos_w_1, blend)
+                root_vel_w = torch.lerp(root_vel_w_0, root_vel_w_1, blend)
+                root_ang_vel_w = torch.lerp(root_ang_vel_w_0, root_ang_vel_w_1, blend)
+                dof_pos = torch.lerp(dof_pos_0, dof_pos_1, blend)
+                dof_vel = torch.lerp(dof_vel_0, dof_vel_1, blend)
+                key_body_pos_w = torch.lerp(key_body_pos_w_0, key_body_pos_w_1, blend.unsqueeze(1))
+            
+            with torch.profiler.record_function("coordinate_transform"):
+                root_vel_b = math_utils.quat_apply_inverse(root_quat, root_vel_w)
+                root_ang_vel_b = math_utils.quat_apply_inverse(root_quat, root_ang_vel_w)
+                key_body_pos_b = math_utils.quat_apply_inverse(
+                    root_quat.unsqueeze(1).expand(-1, self.num_key_bodies, -1),
+                    key_body_pos_w - root_pos_w.unsqueeze(1)
+                )
 
-        blend = blend.unsqueeze(-1)  # make it (n, 1) for broadcasting
-        root_pos_w = torch.lerp(root_pos_w_0, root_pos_w_1, blend)
-        root_vel_w = torch.lerp(root_vel_w_0, root_vel_w_1, blend)
-        root_vel_b = math_utils.quat_apply_inverse(root_quat, root_vel_w)
-        root_ang_vel_w = torch.lerp(root_ang_vel_w_0, root_ang_vel_w_1, blend)
-        root_ang_vel_b = math_utils.quat_apply_inverse(root_quat, root_ang_vel_w)
-        dof_pos = torch.lerp(dof_pos_0, dof_pos_1, blend)
-        dof_vel = torch.lerp(dof_vel_0, dof_vel_1, blend)
-        key_body_pos_w = torch.lerp(key_body_pos_w_0, key_body_pos_w_1, blend.unsqueeze(1))
-        key_body_pos_b = math_utils.quat_apply_inverse(
-            root_quat.unsqueeze(1).expand(-1, self.num_key_bodies, -1),
-            key_body_pos_w - root_pos_w.unsqueeze(1)
-        )
-
-        return {
-            "root_pos_w": root_pos_w,
-            "root_quat": root_quat,
-            "root_vel_w": root_vel_w,
-            "root_vel_b": root_vel_b,
-            "root_ang_vel_w": root_ang_vel_w,
-            "root_ang_vel_b": root_ang_vel_b,
-            "dof_pos": dof_pos,
-            "dof_vel": dof_vel,
-            "key_body_pos_b": key_body_pos_b,
-        }
+            return {
+                "root_pos_w": root_pos_w,
+                "root_quat": root_quat,
+                "root_vel_w": root_vel_w,
+                "root_vel_b": root_vel_b,
+                "root_ang_vel_w": root_ang_vel_w,
+                "root_ang_vel_b": root_ang_vel_b,
+                "dof_pos": dof_pos,
+                "dof_vel": dof_vel,
+                "key_body_pos_b": key_body_pos_b,
+            }
         
         
 class MotionDataManager(ManagerBase):
@@ -378,6 +387,70 @@ class MotionDataManager(ManagerBase):
         msg += "\n"
 
         return msg
+    
+    def start_profiling(self, trace_path: str = "./profiler_trace.json", warmup_steps: int = 5, active_steps: int = 10):
+        """Start PyTorch profiler for performance analysis.
+        
+        Args:
+            trace_path: Path to save the profiler trace file
+            warmup_steps: Number of warmup steps before profiling
+            active_steps: Number of steps to profile
+        """
+        global _profiler, _profiling_step_count, ENABLE_PROFILING
+        
+        ENABLE_PROFILING = True
+        _profiling_step_count = 0
+        
+        _profiler = torch.profiler.profile(
+            activities=[
+                torch.profiler.ProfilerActivity.CPU,
+                torch.profiler.ProfilerActivity.CUDA,
+            ],
+            schedule=torch.profiler.schedule(
+                wait=0,
+                warmup=warmup_steps,
+                active=active_steps,
+                repeat=1
+            ),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler(trace_path),
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True
+        )
+        _profiler.__enter__()
+        print(f"[MotionDataManager] Profiling started. Trace will be saved to {trace_path}")
+        print(f"[MotionDataManager] Warmup: {warmup_steps} steps, Active: {active_steps} steps")
+    
+    def step_profiler(self):
+        """Step the profiler. Call this once per simulation step."""
+        global _profiler, _profiling_step_count, ENABLE_PROFILING
+        
+        if ENABLE_PROFILING and _profiler is not None:
+            _profiler.step()
+            _profiling_step_count += 1
+    
+    def stop_profiling(self):
+        """Stop the profiler and save results."""
+        global _profiler, _profiling_step_count, ENABLE_PROFILING
+        
+        if ENABLE_PROFILING and _profiler is not None:
+            _profiler.__exit__(None, None, None)
+            print(f"[MotionDataManager] Profiling stopped after {_profiling_step_count} steps")
+            print(f"[MotionDataManager] Use 'tensorboard --logdir=<trace_path>' to view the results")
+            
+            # Print summary
+            print("\n" + "="*80)
+            print("Top 10 operations by CUDA time:")
+            print("="*80)
+            print(_profiler.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+            print("\n" + "="*80)
+            print("Top 10 operations by CPU time:")
+            print("="*80)
+            print(_profiler.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+            
+            _profiler = None
+            _profiling_step_count = 0
+            ENABLE_PROFILING = False
     
     """
     Properties.

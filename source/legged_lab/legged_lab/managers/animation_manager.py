@@ -97,51 +97,57 @@ class AnimationTerm(ManagerTermBase):
         self._fetch_motion_data(env_ids)
 
     def update(self, dt: float):
-        if self.cfg.random_fetch:
-            if self.cfg.num_steps_to_use > 0:
-                self.motion_fetch_time[:, 0] = self.motion_data_term.sample_times(self.motion_ids, truncate_time_end=self.num_steps * dt)
-            else: 
-                self.motion_fetch_time[:, 0] = self.motion_data_term.sample_times(self.motion_ids, truncate_time_start=self.num_steps * dt)
+        with torch.profiler.record_function("AnimationTerm::update"):
+            if self.cfg.random_fetch:
+                with torch.profiler.record_function("random_sample_times"):
+                    if self.cfg.num_steps_to_use > 0:
+                        self.motion_fetch_time[:, 0] = self.motion_data_term.sample_times(self.motion_ids, truncate_time_end=self.num_steps * dt)
+                    else: 
+                        self.motion_fetch_time[:, 0] = self.motion_data_term.sample_times(self.motion_ids, truncate_time_start=self.num_steps * dt)
+                    
+                    if self.num_steps > 1:
+                        self.motion_fetch_time[:, 1:] = self.motion_fetch_time[:, 0:1] + self.step_indices[1:].float() * dt
+                
+            self._fetch_motion_data()
             
-            if self.num_steps > 1:
-                self.motion_fetch_time[:, 1:] = self.motion_fetch_time[:, 0:1] + self.step_indices[1:].float() * dt
-            
-        self._fetch_motion_data()
-        
-        # Advance time
-        if not self.cfg.random_fetch:
-            self.motion_fetch_time += dt # only effective when random_fetch is False
-            
-        if self.cfg.enable_visualization:
-            self._visualize()
+            # Advance time
+            if not self.cfg.random_fetch:
+                self.motion_fetch_time += dt # only effective when random_fetch is False
+                
+            if self.cfg.enable_visualization:
+                self._visualize()
             
     def _fetch_motion_data(self, env_ids: Sequence[int] | None = None):
-        if env_ids is None:
-            env_ids = torch.arange(self.num_envs, device=self._env.device)
-        
-        # Flatten for batch processing
-        num_queries = len(env_ids) * self.num_steps
-        motion_times_flat = self.motion_fetch_time[env_ids].reshape(-1)
-        motion_ids_flat = self.motion_ids[env_ids].repeat_interleave(self.num_steps)
-        
-        # Sanity check
-        assert motion_times_flat.shape[0] == num_queries
-        assert motion_ids_flat.shape[0] == num_queries
-        
-        # Fetch motion data
-        motion_data_dict = self.motion_data_term.get_motion_state(
-            motion_ids=motion_ids_flat,
-            motion_times=motion_times_flat
-        )
-        
-        # Reshape and store in buffers
-        for component in self.cfg.motion_data_components:
-            if component in motion_data_dict:
-                buffer_name = f"{component}_buffer"
-                data = motion_data_dict[component]
-                # Reshape: (num_envs * num_steps, *) -> (num_envs, num_steps, *)
-                data_reshaped = data.view(len(env_ids), self.num_steps, *data.shape[1:])
-                getattr(self, buffer_name)[env_ids, :, :] = data_reshaped
+        with torch.profiler.record_function("AnimationTerm::_fetch_motion_data"):
+            if env_ids is None:
+                env_ids = torch.arange(self.num_envs, device=self._env.device)
+            
+            # Flatten for batch processing
+            with torch.profiler.record_function("prepare_query"):
+                num_queries = len(env_ids) * self.num_steps
+                motion_times_flat = self.motion_fetch_time[env_ids].reshape(-1)
+                motion_ids_flat = self.motion_ids[env_ids].repeat_interleave(self.num_steps)
+                
+                # Sanity check
+                assert motion_times_flat.shape[0] == num_queries
+                assert motion_ids_flat.shape[0] == num_queries
+            
+            # Fetch motion data
+            with torch.profiler.record_function("get_motion_state_call"):
+                motion_data_dict = self.motion_data_term.get_motion_state(
+                    motion_ids=motion_ids_flat,
+                    motion_times=motion_times_flat
+                )
+            
+            # Reshape and store in buffers
+            with torch.profiler.record_function("store_buffers"):
+                for component in self.cfg.motion_data_components:
+                    if component in motion_data_dict:
+                        buffer_name = f"{component}_buffer"
+                        data = motion_data_dict[component]
+                        # Reshape: (num_envs * num_steps, *) -> (num_envs, num_steps, *)
+                        data_reshaped = data.view(len(env_ids), self.num_steps, *data.shape[1:])
+                        getattr(self, buffer_name)[env_ids, :, :] = data_reshaped
             
     def _visualize(self):
         # try to get the 'robot_anim' articulation
