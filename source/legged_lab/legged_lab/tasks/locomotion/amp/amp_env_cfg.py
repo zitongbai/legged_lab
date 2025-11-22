@@ -132,6 +132,7 @@ class ObservationsCfg():
         # root_height = ObsTerm(func=mdp.base_pos_z)
 
         def __post_init__(self):
+            self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -156,6 +157,7 @@ class ObservationsCfg():
         )
 
         def __post_init__(self):
+            self.history_length = 5
             self.enable_corruption = False
             self.concatenate_terms = True
     
@@ -291,22 +293,17 @@ class RewardsCfg:
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
-    alive = RewTerm(
-        func=mdp.is_alive, weight=0.15
-    )
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
-    dof_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
-    dof_energy = RewTerm(func=mdp.joint_energy, weight=-2e-5)
     feet_air_time = RewTerm(
         func=mdp.feet_air_time,
         weight=0.125,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=MISSING),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
             "command_name": "base_velocity",
             "threshold": 0.5,
         },
@@ -314,7 +311,7 @@ class RewardsCfg:
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=MISSING), "threshold": 1.0},
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*THIGH"), "threshold": 1.0},
     )
     # -- optional penalties
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0.0)
@@ -342,22 +339,7 @@ class TerminationsCfg:
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
-
-    lin_vel_cmd_levels = CurrTerm(
-        func=mdp.lin_vel_cmd_levels,
-        params={
-            "reward_term_name": "track_lin_vel_xy_exp",
-            "lin_vel_x_limit": [-0.5, 1.0],
-            "lin_vel_y_limit": [-0.3, 0.3],
-        }
-    )
-    ang_vel_cmd_levels = CurrTerm(
-        func=mdp.ang_vel_cmd_levels,
-        params={
-            "reward_term_name": "track_ang_vel_z_exp",
-            "ang_vel_z_limit": [-0.2, 0.2],
-        }
-    )
+    pass
 
 @configclass
 class MotionDataCfg:

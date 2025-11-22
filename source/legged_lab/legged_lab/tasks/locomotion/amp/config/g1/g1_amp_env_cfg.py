@@ -43,47 +43,35 @@ AMP_NUM_STEPS = 10
 @configclass
 class G1AmpRewards():
     """Reward terms for the MDP."""
-
-    # -- Task
+    # -- task
     track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=1.0,
-        params={"command_name": "base_velocity", "std": 0.25},
+        func=mdp.track_lin_vel_xy_exp, weight=1.0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
     track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_world_exp, weight=0.5, params={"command_name": "base_velocity", "std": 0.25}
+        func=mdp.track_ang_vel_z_exp, weight=1.0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
-    
-    # -- Alive
-    alive = RewTerm(func=mdp.is_alive, weight=0.15)
-    
-    # -- Base Link
-    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+
+    # -- penalties
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1.0)
+    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-0.2)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-10.0,
-        params={
-            "target_height": 0.78,
-            # "sensor_cfg": SceneEntityCfg("height_scanner")
-        },
+    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-2.0e-6)
+    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-1.0e-7)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.005)
+    dof_pos_limits = RewTerm(
+        func=mdp.joint_pos_limits,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint", ".*_ankle_roll_joint"])},
     )
     
-    # -- Joint
-    dof_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
-    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
-    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-    dof_energy = RewTerm(func=mdp.joint_energy, weight=-2e-5)
-    
-    # Penalize deviation from default of the joints that are not essential for locomotion
     joint_deviation_hip = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-0.1,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_yaw_joint", ".*_hip_roll_joint"])},
     )
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.1,
+        weight=-0.03,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -97,69 +85,30 @@ class G1AmpRewards():
     )
     joint_deviation_waist = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-0.1,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names="waist_.*_joint")},
     )
     
-    # -- Feet
+    feet_air_time = RewTerm(
+        func=mdp.feet_air_time_positive_biped,
+        weight=0.75,
+        params={
+            "command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll_link"),
+            "threshold": 0.4,
+        },
+    )
     feet_slide = RewTerm(
         func=mdp.feet_slide,
-        weight=-0.2,
+        weight=-0.1,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll_link"),
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_ankle_roll_link"),
         },
     )
-    # feet_air_time = RewTerm(
-    #     func=mdp.feet_air_time_positive_biped,
-    #     weight=0.0,
-    #     params={
-    #         "command_name": "base_velocity",
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll_link"),
-    #         "threshold": 0.4,
-    #     },
-    # )
-    feet_clearance = RewTerm(
-        func=mdp.foot_clearance_reward,
-        weight=1.0,
-        params={
-            "std": 0.05,
-            "tanh_mult": 2.0,
-            "target_height": 0.1,
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-        },
-    )
     
-    feet_gait = RewTerm(
-        func=mdp.feet_gait,
-        weight=0.5, 
-        params={
-            "period": 0.8,
-            "offset": [0.0, 0.5],
-            "threshold": 0.55,
-            "command_name": "base_velocity",
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
-        }
-    )
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-200.0)
 
-    # -- other
-    undesired_contacts = RewTerm(
-        func=mdp.undesired_contacts,
-        weight=-1,
-        params={
-            "threshold": 1,
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["(?!.*ankle.*).*"]),
-        },
-    )
-    
-    stand_still = RewTerm(
-        func=mdp.stand_still_joint_deviation_l1,
-        weight=-0.5, 
-        params={
-            "command_name": "base_velocity", 
-            "command_threshold": 0.06
-        }
-    )
 
 @configclass
 class G1AmpEnvCfg(LocomotionAmpEnvCfg):
@@ -176,12 +125,18 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
         # motion data
         # ------------------------------------------------------
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "amp"
+            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "amp", "walk"
         )
         self.motion_data.motion_dataset.motion_data_weights = {
-            "C4_-_run_to_walk_a_stageii": 1.0, 
-            # "C11_-_run_turn_left_90_stageii": 1.0,
-            # "C14_-_run_turn_right_90_stageii": 1.0,
+            "B10_-__Walk_turn_left_45_stageii": 1.0, 
+            "B11_-__Walk_turn_left_135_stageii": 1.0,
+            "B13_-__Walk_turn_right_90_stageii": 1.0,
+            "B14_-__Walk_turn_right_45_t2_stageii": 1.0,
+            "B15_-__Walk_turn_around_stageii": 1.0,
+            "B22_-__side_step_left_stageii": 1.0,
+            "B23_-__side_step_right_stageii": 1.0,
+            "B4_-_Stand_to_Walk_backwards_stageii": 1.0,
+            "B9_-__Walk_turn_left_90_stageii": 1.0,
         }
 
         # ------------------------------------------------------
@@ -245,52 +200,14 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Rewards
         # ------------------------------------------------------
-        # task
-        self.rewards.track_lin_vel_xy_exp.weight = 1.5
-        self.rewards.track_ang_vel_z_exp.weight = 0.5
-        
-        self.rewards.alive.weight = 0.15
-        
-        # base
-        self.rewards.lin_vel_z_l2.weight = -2.0
-        self.rewards.ang_vel_xy_l2.weight = -0.05
-        self.rewards.flat_orientation_l2.weight = -5.0
-        self.rewards.base_height.weight = -10.0
-        self.rewards.base_height.params["target_height"] = 0.78
-        self.rewards.base_height.params["sensor_cfg"] = None  # no height scanner
-        
-        # joint
-        self.rewards.dof_vel_l2.weight = -0.001
-        self.rewards.dof_acc_l2.weight = -2.5e-7
-        self.rewards.action_rate_l2.weight = -0.05
-        self.rewards.dof_pos_limits.weight = -5.0
-        self.rewards.dof_energy.weight = -2e-5
-        
-        # feet
-        self.rewards.feet_air_time = None
-        self.rewards.feet_slide.weight = -0.2
-        self.rewards.feet_clearance.weight = 1.0
-        # self.rewards.feet_clearance.params["target_feet_height"] = 0.15
-        self.rewards.feet_gait.weight = 0.5
-        
-        # deviation
-        self.rewards.joint_deviation_hip.weight = -1.0
-        self.rewards.joint_deviation_arms.weight = -0.1
-        self.rewards.joint_deviation_waist.weight = -1.0
-
-        self.rewards.undesired_contacts.weight = -1.0
-        self.rewards.undesired_contacts.params["threshold"] = 1.0
-        self.rewards.undesired_contacts.params["sensor_cfg"] = SceneEntityCfg(
-            "contact_forces",
-            body_names=["(?!.*ankle.*).*"],  # exclude ankle links
-        )
         
         # ------------------------------------------------------
         # Commands
         # ------------------------------------------------------
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.1, 0.1)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.1, 0.1)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.1, 0.1)
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.5)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.heading = (-math.pi, math.pi)
         
         # ------------------------------------------------------
         # Curriculum
@@ -301,9 +218,7 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # terminations
         # ------------------------------------------------------
-        self.terminations.base_contact.params["sensor_cfg"].body_names = [
-            "waist_yaw_link", "pelvis", ".*_shoulder_.*_link", ".*_elbow_link",
-        ]
+        self.terminations.base_contact = None
 
 
 @configclass

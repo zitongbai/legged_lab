@@ -19,16 +19,24 @@ class G1RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
         "discriminator": ["disc"],
         "discriminator_demonstration": ["disc_demo"]
     }
-    policy = RslRlPpoActorCriticRecurrentCfg(
+    # policy = RslRlPpoActorCriticRecurrentCfg(
+    #     init_noise_std=1.0,
+    #     actor_hidden_dims=[512, 256, 128],
+    #     critic_hidden_dims=[512, 256, 128],
+    #     actor_obs_normalization=False,
+    #     critic_obs_normalization=False,
+    #     activation="elu",
+    #     rnn_type="lstm",
+    #     rnn_hidden_dim=64,
+    #     rnn_num_layers=1
+    # )
+    policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
         actor_obs_normalization=False,
         critic_obs_normalization=False,
         activation="elu",
-        rnn_type="lstm",
-        rnn_hidden_dim=64,
-        rnn_num_layers=1
     )
     algorithm = RslRlPpoAmpAlgorithmCfg(
         class_name="PPOAMP",
@@ -55,7 +63,7 @@ class G1RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
                 hidden_dims=[1024, 512],
                 activation="elu",
                 style_reward_scale=5.0,
-                task_style_lerp=1.0
+                task_style_lerp=0.5
             ),
         )
     )
