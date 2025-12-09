@@ -78,44 +78,66 @@ git checkout feature/amp
 python -m pip install -e .
 ```
 
-- Download the usd model for Unitree G1:
+## Usage
+
+### Prepare motion data
+
+We have already provided some off-the-shelf motion data in the `source/legged_lab/legged_lab/data/MotionData` folder for testing. 
+
+If you want to add more motion data, you can do so by following the steps below.
+
+1. Retarget human motion data to the robot model. We recommend using [GMR](https://github.com/YanjieZe/GMR) for retargeting human motion data. 
+2. Put the retargeted motion data in the `temp/gmr_data` folder. 
+3. Use a helper script to convert the motion data to the required format:
 
 ```bash
-# in legged lab directory
-gdown "https://drive.google.com/drive/folders/1rlhZcurMenq4RGojZVUDl3a6Ja2hm-di?usp=drive_link" --folder -O ./source/legged_lab/legged_lab/data/Robots/
+python scripts/tools/retarget/dataset_retarget.py \
+    --robot g1 \
+    --input_dir temp/gmr_data/ \
+    --output_dir temp/lab_data/ \
+    --config_file scripts/tools/retarget/config/g1_29dof.yaml \
+    --loop clamp
 ```
 
-- Download the motion data for Unitree G1:
+Please refer to the comments in the script for more details about the arguments, and refer to `scripts/tools/retarget/gmr_to_lab.py` for the data format used in this repository.
+
+### DeepMimic
+
+<details>
+<summary>Train</summary>
+
+To train the DeepMimic algorithm, you can run the following command:
 
 ```bash
-# in legged lab directory
-gdown "https://drive.google.com/drive/folders/1tXtyjgM_wwqWNwnpn8ny5b4q1c-GxZkm?usp=sharing" --folder -O ./source/legged_lab/legged_lab/data/
+python scripts/rsl_rl/train.py --task LeggedLab-Isaac--Deepmimic-G1-v0 --headless --max_iterations 50000
 ```
 
-- Verify that the extension is correctly installed by running the following command:
+The `max_iterations` can be adjusted based on your needs. For more details about the arguments, run `python scripts/rsl_rl/train.py -h`.
+
+</details>
+
+<details>
+<summary>Play</summary>
+
+You can play the trained model in a headless mode and record the video: 
 
 ```bash
-python scripts/rsl_rl/train.py --task=LeggedLab-Isaac-Velocity-Rough-G1-v0 --headless
+# replace the checkpoint path with the path to your trained model
+python scripts/rsl_rl/play.py --task LeggedLab-Isaac-Deepmimic-G1-v0 --headless --num_envs 64 --video --checkpoint logs/rsl_rl/experiment_name/run_name/model_xxx.pt
 ```
 
-## Train
-<!-- 
-### RL
+</details>
 
-To train the reinforcement learning for Unitree G1, you can run the following command:
 
-```bash
-python scripts/rsl_rl/train.py --task=LeggedLab-Isaac-Velocity-Rough-G1-v0 --headless
-```
+### Adversarial Motion Priors (AMP)
 
-For more details about the arguments, run `python scripts/rsl_rl/train.py -h`. -->
-
-### AMP
+<details>
+<summary>Train</summary>
 
 To train the AMP algorithm, you can run the following command:
 
 ```bash
-python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-G1-v0 --headless --max_iterations 10000
+python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-G1-v0 --headless --max_iterations 50000
 ```
 
 If you want to train it in a non-default gpu, you can pass more arguments to the command:
@@ -127,7 +149,10 @@ python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-G1-v0 --headless --max
 
 For more details about the arguments, run `python scripts/rsl_rl/train.py -h`.
 
-## Play
+</details>
+
+<details>
+<summary>Play</summary>
 
 You can play the trained model in a headless mode and record the video: 
 
@@ -137,6 +162,8 @@ python scripts/rsl_rl/play.py --task LeggedLab-Isaac-AMP-G1-v0 --headless --num_
 ```
 
 The video will be saved in the `logs/rsl_rl/experiment_name/run_name/videos/play` directory.
+
+</details>
 
 ## TODOS
 
