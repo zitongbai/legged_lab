@@ -16,4 +16,4 @@
 *.pt filter=lfs diff=lfs merge=lfs -text
 *.jit filter=lfs diff=lfs merge=lfs -text
 source/legged_lab/legged_lab/data/MotionData/** filter=lfs diff=lfs merge=lfs -text
-source/legged_lab/legged_lab/data/Robots/Unitree/** filter=lfs diff=lfs merge=lfs -text
+source/legged_lab/legged_lab/data/Robots/** filter=lfs diff=lfs merge=lfs -text
