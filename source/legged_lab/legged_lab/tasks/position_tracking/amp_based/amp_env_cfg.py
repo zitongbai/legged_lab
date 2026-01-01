@@ -124,7 +124,7 @@ class ObservationsCfg:
         )
 
         def __post_init__(self):
-            self.history_length = 5
+            # self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -555,17 +555,17 @@ class CurriculumCfg:
         }
     )
     
-    change_actuator_gains = CurrTerm(
-        func=mdp.modify_term_cfg,
-        params={
-            "address": "events.randomize_actuator_gains.params",
-            "modify_fn": mdp.override_value,
-            "modify_params": {"value": 
-                {"stiffness_distribution_params": (0.5, 2.0),
-                 "damping_distribution_params": (0.5, 2.0)}, 
-                "num_steps": 8000*48}
-        }
-    )
+    # change_actuator_gains = CurrTerm(
+    #     func=mdp.modify_term_cfg,
+    #     params={
+    #         "address": "events.randomize_actuator_gains.params",
+    #         "modify_fn": mdp.override_value,
+    #         "modify_params": {"value": 
+    #             {"stiffness_distribution_params": (0.5, 2.0),
+    #              "damping_distribution_params": (0.5, 2.0)}, 
+    #             "num_steps": 8000*48}
+    #     }
+    # )
     
     # start_apply_external_force_torque = CurrTerm(
     #     func=mdp.modify_term_cfg,

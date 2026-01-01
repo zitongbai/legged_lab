@@ -135,19 +135,19 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.events.randomize_apply_external_force_torque.params["asset_cfg"].body_names = [self.base_link_name]
         self.events.randomize_apply_external_force_torque.params["force_range"] = (0, 0)
         self.events.randomize_apply_external_force_torque.params["torque_range"] = (0, 0)
-        self.events.randomize_actuator_gains.params["stiffness_distribution_params"] = (1.0, 1.0)
-        self.events.randomize_actuator_gains.params["damping_distribution_params"] = (1.0, 1.0)
+        self.events.randomize_actuator_gains.params["stiffness_distribution_params"] = (0.5, 2.0)
+        self.events.randomize_actuator_gains.params["damping_distribution_params"] = (0.5, 2.0)
         self.events.randomize_push_robot.params["velocity_range"] = {"x": (0, 0), "y": (0, 0)}
         # ------------------------------Rewards------------------------------
         # General
-        self.rewards.is_terminated.weight = -400.0
-        self.rewards.joint_deviation.weight = -0.25
+        self.rewards.is_terminated.weight = -500.0
+        self.rewards.joint_deviation.weight = -0.3
         
         # Base
         self.rewards.base_height.weight = -10.0
         self.rewards.flat_orientation.weight = -0.5
         self.rewards.base_lin_vel_z.weight = -0.7
-        self.rewards.base_ang_vel_xy.weight = -0.05
+        self.rewards.base_ang_vel_xy.weight = -0.12
         self.rewards.base_acc.weight = -5e-4
         
         # Command
@@ -156,7 +156,7 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # Joint penalties
         self.rewards.joint_torques_l2.weight = -2e-4
         self.rewards.joint_vel_l2.weight = -1e-4
-        self.rewards.joint_acc_l2.weight = -2.5e-7
+        self.rewards.joint_acc_l2.weight = -2.5e-6
         self.rewards.joint_pos_limits.weight = -10.0
         self.rewards.joint_vel_limits.weight = -1.0
         
@@ -171,7 +171,7 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         
 
         # Position-tracking rewards
-        self.rewards.position_tracking.weight = 15.0
+        self.rewards.position_tracking.weight = 20.0
         self.rewards.exploration.weight = 5.0
         self.rewards.stalling_penalty.weight = -5.0
 
@@ -181,9 +181,9 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.feet_slide.weight = -2.0
         self.rewards.feet_slide.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_slide.params["asset_cfg"].body_names = [self.foot_link_name]
-        self.rewards.feet_height.weight = -5.0
+        self.rewards.feet_height.weight = -4.0
         self.rewards.feet_height.params["asset_cfg"].body_names = [self.foot_link_name]
-        self.rewards.feet_height.params["target_height"] = -0.22
+        self.rewards.feet_height.params["target_height"] = -0.24
         self.rewards.feet_height.params["dis_threshold"] = 0.25
         self.rewards.feet_height.params["heading_threshold"] = 0.5
         self.rewards.feet_air_time.weight = 1.0

@@ -64,7 +64,7 @@ class Go2RoughPPORunnerAmpCfg(RslRlOnPolicyRunnerCfg):
                 hidden_dims=[1024, 512],
                 activation="elu",
                 style_reward_scale=5.0,
-                task_style_lerp=0.4
+                task_style_lerp=0.75
             ),
             loss_type="LSGAN"
         ),
