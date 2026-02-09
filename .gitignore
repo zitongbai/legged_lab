@@ -27,6 +27,7 @@
 **/wandb/*
 **/.neptune/*
 docker/artifacts/
+docker/.cache/
 *.tmp
 
 # Isaac-Sim packman

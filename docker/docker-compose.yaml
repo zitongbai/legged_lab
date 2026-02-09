@@ -1,33 +1,60 @@
-x-default-isaac-lab-template-environment: &default-isaac-lab-template-environment
-  - OMNI_KIT_ALLOW_ROOT=1
-
-x-default-isaac-lab-template-deploy: &default-isaac-lab-template-deploy
-  resources:
-    reservations:
-      devices:
-        - driver: nvidia
-          count: all
-          capabilities: [ gpu ]
+x-default-environment: &default-environment
+  OMNI_KIT_ALLOW_ROOT: "1"
+  ACCEPT_EULA: "Y"
+  PRIVACY_CONSENT: "Y"
+  HTTP_PROXY: ${HTTP_PROXY:-}
+  HTTPS_PROXY: ${HTTPS_PROXY:-}
+  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
+  http_proxy: ${HTTP_PROXY:-}
+  https_proxy: ${HTTPS_PROXY:-}
+  no_proxy: ${NO_PROXY:-localhost,127.0.0.1}
 
 services:
-  isaac-lab-template:
+  legged-lab:
     env_file: .env.base
-    build:
-      context: ../
-      dockerfile: docker/Dockerfile
-      args:
-        - ISAACLAB_BASE_IMAGE_ARG=${ISAACLAB_BASE_IMAGE}
-        - DOCKER_ISAACLAB_EXTENSION_TEMPLATE_PATH_ARG=${DOCKER_ISAACLAB_EXTENSION_TEMPLATE_PATH}
-    image: isaac-lab-template
-    container_name: isaac-lab-template
+    image: ${ISAACLAB_IMAGE:-nvcr.io/nvidia/isaac-lab:2.3.2}
+    container_name: ${CONTAINER_NAME:-legged-lab}
+    network_mode: host
+    gpus: all
+    working_dir: /workspace/legged_lab
     volumes:
       - type: bind
         source: ../
-        target: ${DOCKER_ISAACLAB_EXTENSION_TEMPLATE_PATH}
-    network_mode: host
-    environment: *default-isaac-lab-template-environment
-    deploy: *default-isaac-lab-template-deploy
-    # This is the entrypoint for the container
-    entrypoint: bash
+        target: /workspace/legged_lab
+      - type: bind
+        source: ${RSL_RL_PATH:-../../rsl_rl}
+        target: /workspace/rsl_rl
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/kit
+        target: /isaac-sim/kit/cache
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/ov
+        target: /root/.cache/ov
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/pip
+        target: /root/.cache/pip
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/glcache
+        target: /root/.cache/nvidia/GLCache
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/computecache
+        target: /root/.nv/ComputeCache
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/logs
+        target: /root/.nvidia-omniverse/logs
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/data
+        target: /root/.local/share/ov/data
+      - type: bind
+        source: ${DOCKER_CACHE_ROOT:-./.cache}/documents
+        target: /root/Documents
+    environment: *default-environment
+    entrypoint: ["bash", "-lc"]
+    command:
+      - |
+        set -euo pipefail
+        /workspace/isaaclab/_isaac_sim/python.sh -m pip install -e /workspace/rsl_rl --no-deps
+        /workspace/isaaclab/_isaac_sim/python.sh -m pip install -e /workspace/legged_lab/source/legged_lab
+        exec bash
     stdin_open: true
     tty: true
