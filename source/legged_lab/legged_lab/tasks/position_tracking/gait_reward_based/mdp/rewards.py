@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import torch
+import torch.nn.functional as F
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -392,11 +393,12 @@ def feet_edge_penalty(
     RL_ray_sensor_cfg: SceneEntityCfg,
     RR_ray_sensor_cfg: SceneEntityCfg,
     contact_sensor_cfg: SceneEntityCfg,
-    edge_height_thresh: float = 0.05,
+    edge_grad_thresh: float | None = None,
+    edge_curvature_thresh: float | None = None,
 ) -> torch.Tensor:
     """Penalize if the feet are close to the edge of the terrain.
     
-    This is detected by checking the height variance/difference in the vicinity of the feet.
+    This is detected by checking gradient/curvature in the vicinity of the feet.
     """
     FL_ray_sensor: RayCaster = env.scene.sensors[FL_ray_sensor_cfg.name]
     FR_ray_sensor: RayCaster = env.scene.sensors[FR_ray_sensor_cfg.name]
@@ -412,19 +414,49 @@ def feet_edge_penalty(
     ray_hits = torch.cat([FL_ray_hits, FR_ray_hits, RL_ray_hits, RR_ray_hits], dim=1)
     
     # Get heights
-    scan_heights = ray_hits[..., 2] # (num_envs, 4, num_rays)
-    
-    # Calculate height difference (max - min) in the scan
-    # We use a robust metric, e.g., std dev or range.
-    height_range = torch.max(scan_heights, dim=-1)[0] - torch.min(scan_heights, dim=-1)[0] # (num_envs, 4)
+    scan_heights = ray_hits[..., 2]  # (num_envs, 4, num_rays)
+    valid_mask = torch.isfinite(scan_heights)
+    valid_counts = valid_mask.sum(dim=-1, keepdim=True).clamp(min=1)
+    mean_heights = torch.where(valid_mask, scan_heights, torch.zeros_like(scan_heights)).sum(dim=-1, keepdim=True)
+    mean_heights = mean_heights / valid_counts
+    scan_heights = torch.where(valid_mask, scan_heights, mean_heights)
+
+    pattern_cfg = FL_ray_sensor.cfg.pattern_cfg
+    if hasattr(pattern_cfg, "resolution") and hasattr(pattern_cfg, "size"):
+        num_x = int(round(pattern_cfg.size[0] / pattern_cfg.resolution)) + 1
+        num_y = int(round(pattern_cfg.size[1] / pattern_cfg.resolution)) + 1
+        if getattr(pattern_cfg, "ordering", "xy") == "xy":
+            grid_h, grid_w = num_y, num_x
+        else:
+            grid_h, grid_w = num_x, num_y
+    else:
+        num_rays = scan_heights.shape[-1]
+        grid_h = int(num_rays ** 0.5)
+        grid_w = num_rays // grid_h
+
+    height_map = scan_heights.view(env.num_envs * 4, 1, grid_h, grid_w)
+
+    sobel_x = height_map.new_tensor([[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]])
+    sobel_y = height_map.new_tensor([[-1.0, -2.0, -1.0], [0.0, 0.0, 0.0], [1.0, 2.0, 1.0]])
+    laplace = height_map.new_tensor([[0.0, 1.0, 0.0], [1.0, -4.0, 1.0], [0.0, 1.0, 0.0]])
+
+    grad_x = F.conv2d(height_map, sobel_x.view(1, 1, 3, 3), padding=1)
+    grad_y = F.conv2d(height_map, sobel_y.view(1, 1, 3, 3), padding=1)
+    grad_mag = torch.sqrt(grad_x.pow(2) + grad_y.pow(2)).view(env.num_envs, 4, -1)
+
+    curv_mag = F.conv2d(height_map, laplace.view(1, 1, 3, 3), padding=1).abs().view(env.num_envs, 4, -1)
+
+    grad_max = grad_mag.max(dim=-1)[0]
+    curv_max = curv_mag.max(dim=-1)[0]
     
     # Check if foot is in contact
     # We use the robot's contact force data
     contacts = contact_sensor.data.net_forces_w_history[:, :, contact_sensor_cfg.body_ids, :].norm(dim=-1).max(dim=1)[0] > 1.0 # (num_envs, num_feet)
     
     # Penalty
-    # If in contact AND height_range > threshold
-    is_edge = height_range > edge_height_thresh
+    # If in contact AND gradient/curvature indicates edge
+    is_edge = (grad_max > edge_grad_thresh) & (curv_max > edge_curvature_thresh)
+    is_edge = is_edge | (~valid_mask.all(dim=-1))
     
     penalty = torch.sum(torch.where(contacts & is_edge, 1.0, 0.0), dim=-1)
     

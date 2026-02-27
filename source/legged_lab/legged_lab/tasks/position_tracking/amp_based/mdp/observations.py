@@ -7,7 +7,7 @@ import isaaclab.utils.math as math_utils
 import isaaclab.utils.string as string_utils
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.sensors import FrameTransformer
+from isaaclab.sensors import ContactSensor, FrameTransformer
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
@@ -60,3 +60,31 @@ def ref_root_local_rot_tan_norm(
     else:
         return obs
 
+def feet_contact(
+    env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, threshold: float = 1.0
+) -> torch.Tensor:
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    contacts = contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :].norm(dim=-1).max(dim=1)[0] > threshold
+    return contacts.float()
+
+
+def ref_feet_contact(
+    env: ManagerBasedAnimationEnv,
+    animation: str,
+    height_threshold: float = 0.03,
+    flatten_steps_dim: bool = True,
+) -> torch.Tensor:
+    animation_term: AnimationTerm = env.animation_manager.get_term(animation)
+    ref_root_pos_w = animation_term.get_root_pos_w()
+    ref_root_quat = animation_term.get_root_quat()
+    ref_key_body_pos_b = animation_term.get_key_body_pos_b()
+
+    num_envs, num_steps, num_key_bodies, _ = ref_key_body_pos_b.shape
+    key_body_pos_w = ref_root_pos_w.unsqueeze(2) + math_utils.quat_apply(
+        ref_root_quat.unsqueeze(2).expand(-1, -1, num_key_bodies, -1),
+        ref_key_body_pos_b,
+    )
+    contacts = key_body_pos_w[..., 2] < height_threshold
+    if flatten_steps_dim:
+        return contacts.reshape(num_envs, -1).float()
+    return contacts.float()

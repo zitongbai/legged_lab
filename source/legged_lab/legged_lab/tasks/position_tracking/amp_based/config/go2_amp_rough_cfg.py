@@ -80,6 +80,13 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
                 preserve_order=True
             )
         }
+        self.observations.disc.feet_contact.params = {
+            "sensor_cfg": SceneEntityCfg(
+                name="contact_forces",
+                body_names=KEY_BODY_NAMES,
+            ),
+            "threshold": 1.0,
+        }
         self.observations.disc.history_length = AMP_NUM_STEPS
         
         # discriminator demostration observations
@@ -89,6 +96,7 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.observations.disc_demo.ref_joint_pos.params["animation"] = ANIMATION_TERM_NAME
         self.observations.disc_demo.ref_joint_vel.params["animation"] = ANIMATION_TERM_NAME
         self.observations.disc_demo.ref_key_body_pos_b.params["animation"] = ANIMATION_TERM_NAME
+        self.observations.disc_demo.ref_feet_contact.params["animation"] = ANIMATION_TERM_NAME
 
         self.observations.policy.base_ang_vel.scale = 0.2
         self.observations.policy.joint_pos.scale = 1.0
@@ -156,7 +164,7 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # Joint penalties
         self.rewards.joint_torques_l2.weight = -2e-4
         self.rewards.joint_vel_l2.weight = -1e-4
-        self.rewards.joint_acc_l2.weight = -2.5e-6
+        self.rewards.joint_acc_l2.weight = -1e-6
         self.rewards.joint_pos_limits.weight = -10.0
         self.rewards.joint_vel_limits.weight = -1.0
         
@@ -192,6 +200,7 @@ class Go2AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.feet_air_time.params["heading_threshold"] = 0.5
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_stumble.weight = -2.0
+        self.rewards.feet_edge.weight = -1.0
 
         # If the weight of rewards is 0, set rewards to None
         if self.__class__.__name__ == "Go2AmpRoughEnvCfg":
@@ -210,7 +219,7 @@ class Go2AmpRoughEnvCfg_PLAY(Go2AmpRoughEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         
-        self.scene.num_envs = 50
+        self.scene.num_envs = 32
         self.scene.env_spacing = 8.0
            # spawn the robot randomly in the grid (instead of their terrain levels)
         self.scene.terrain.max_init_terrain_level = None

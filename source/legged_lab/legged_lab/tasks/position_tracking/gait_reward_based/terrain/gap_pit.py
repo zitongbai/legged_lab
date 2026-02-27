@@ -157,8 +157,18 @@ PIT_CFG = TerrainGeneratorCfg(
     curriculum=True,
     sub_terrains={
         "pit": terrain_gen.MeshPitTerrainCfg(
-            proportion=0.5,
+            proportion=0.3,
             pit_depth_range=(0.05, 0.9),
+            platform_width=3.0,
+            flat_patch_sampling={
+                "target": FlatPatchSamplingCfg(
+                    x_range=(-4.5, 4.5), y_range=(-4.5, 4.5),
+                    num_patches=100, patch_radius=0.25, max_height_diff=0.1)
+            },
+        ),
+        "box": terrain_gen.MeshBoxTerrainCfg(
+            proportion=0.3,
+            box_height_range=(0.05, 0.9),
             platform_width=3.0,
             flat_patch_sampling={
                 "target": FlatPatchSamplingCfg(
@@ -175,7 +185,7 @@ PIT_CFG = TerrainGeneratorCfg(
             },
         ),
         "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
-            proportion=0.15,
+            proportion=0.1,
             step_height_range=(0.05, 0.23),
             step_width=0.3,
             platform_width=3.0,
@@ -188,7 +198,7 @@ PIT_CFG = TerrainGeneratorCfg(
             },
         ),
         "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-            proportion=0.15,
+            proportion=0.1,
             step_height_range=(0.05, 0.23),
             step_width=0.3,
             platform_width=3.0,

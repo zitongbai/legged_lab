@@ -206,6 +206,13 @@ class ObservationsCfg:
             func=mdp_amp.key_body_pos_b,
             params=MISSING,
         )
+        feet_contact = ObsTerm(
+            func=mdp_amp.feet_contact,
+            params={
+                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
+                "threshold": 1.0,
+            },
+        )
         
         def __post_init__(self):
             self.enable_corruption = False
@@ -252,6 +259,14 @@ class ObservationsCfg:
                 "animation": MISSING,
                 "flatten_steps_dim": False,
             }
+        )
+        ref_feet_contact = ObsTerm(
+            func=mdp_amp.ref_feet_contact,
+            params={
+                "animation": MISSING,
+                "height_threshold": 0.03,
+                "flatten_steps_dim": False,
+            },
         )
         
         def __post_init__(self):
@@ -487,7 +502,8 @@ class RewardsCfg:
             "RL_ray_sensor_cfg": SceneEntityCfg("RL_foot_height_scanner"),
             "RR_ray_sensor_cfg": SceneEntityCfg("RR_foot_height_scanner"),
             "contact_sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
-            "edge_height_thresh": 0.05,
+            "edge_grad_thresh": 0.1,
+            "edge_curvature_thresh": 0.05,
         },
     )
     feet_stumble = RewTerm(
@@ -513,6 +529,10 @@ class TerminationsCfg:
     illegal_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=""), "threshold": 1.0},
+    )
+    bad_orientation = DoneTerm(
+        func=mdp.bad_orientation,
+        params={"limit_angle": math.radians(40.0)},
     )
 
 

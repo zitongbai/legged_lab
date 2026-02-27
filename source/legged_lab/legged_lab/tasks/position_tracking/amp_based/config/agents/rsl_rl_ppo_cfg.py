@@ -12,7 +12,7 @@ class Go2RoughPPORunnerAmpCfg(RslRlOnPolicyRunnerCfg):
     class_name = "AMPRunner"
     num_steps_per_env = 48
     max_iterations = 50000
-    save_interval = 200
+    save_interval = 500
     experiment_name = "go2_amp_rough"
     obs_groups = {
         "policy": ["policy"], 
@@ -63,8 +63,8 @@ class Go2RoughPPORunnerAmpCfg(RslRlOnPolicyRunnerCfg):
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
                 hidden_dims=[1024, 512],
                 activation="elu",
-                style_reward_scale=5.0,
-                task_style_lerp=0.75
+                style_reward_scale=1.75,
+                task_style_lerp=0.9
             ),
             loss_type="LSGAN"
         ),
