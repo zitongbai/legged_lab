@@ -39,3 +39,6 @@ _build
 # Temp folders
 **/temp/
 **/tmp/
+
+# Codex local environment
+.codex/env.local.sh
