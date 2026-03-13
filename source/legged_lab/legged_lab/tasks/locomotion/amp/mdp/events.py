@@ -1,3 +1,9 @@
+"""Legacy AMP event helpers.
+
+These RSI helpers are currently not wired into the active AMP reset path.
+AMP reset uses ``deepmimic.mdp.reset_from_ref`` via ``amp.mdp`` re-exports.
+Keep this module only as documented legacy code until it is either revived or removed.
+"""
 
 from __future__ import annotations
 
@@ -29,9 +35,12 @@ def ref_state_init_root(
     env: ManagerBasedAmpEnv, 
     env_ids: torch.Tensor,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    motion_dataset: str | None = None,
     pos_rsi: bool = True,
 ):
-    """Reference State Initialization (RSI) for the root of the robot.
+    """Legacy Reference State Initialization (RSI) for the root of the robot.
+
+    This helper is currently unused by the active AMP task configuration.
     Sample from the motion loader and set the root position and orientation.
     Refer to the paper of Adversarial Motion Priors (AMP) for more details.
 
@@ -46,16 +55,10 @@ def ref_state_init_root(
     num_envs = env_ids.shape[0]
     dt = env.cfg.sim.dt * env.cfg.decimation
 
-    if motion_dataset is None:
-        # select one dataset randomly by weights
-        term_weights = env.motion_data_manager.get_term_weights()
-        motion_dataset = random.choices(list(term_weights.keys()), weights=list(term_weights.values()))[0]
-    else:
-        if motion_dataset not in env.motion_data_manager.active_terms():
-            raise ValueError(f"Motion dataset '{motion_dataset}' not found in the active terms.")
+    motion_dataset = _resolve_motion_dataset(env, motion_dataset)
     motion_loader = env.motion_data_manager.get_term(motion_dataset)
     motion_ids = motion_loader.sample_motions(num_envs)
-    motion_times = motion_loader.sample_times(motion_ids, truncate_time=dt)
+    motion_times = motion_loader.sample_times(motion_ids, truncate_time_end=dt)
     motion_state_dict = motion_loader.get_motion_state(motion_ids, motion_times)
     
     lift_a_little = 0.05
@@ -85,7 +88,9 @@ def ref_state_init_dof(
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     motion_dataset: str | None = None,
 ):
-    """Reference State Initialization (RSI) for the joints (DoF) of the robot.
+    """Legacy Reference State Initialization (RSI) for the joints (DoF) of the robot.
+
+    This helper is currently unused by the active AMP task configuration.
     Sample from the motion loader and set the joint positions and velocities.
     Refer to the paper of Adversarial Motion Priors (AMP) for more details.
 
@@ -101,16 +106,10 @@ def ref_state_init_dof(
     num_envs = env_ids.shape[0]
     dt = env.cfg.sim.dt * env.cfg.decimation
     
-    if motion_dataset is None:
-        # select one dataset randomly by weights
-        term_weights = env.motion_data_manager.get_term_weights()
-        motion_dataset = random.choices(list(term_weights.keys()), weights=list(term_weights.values()))[0]
-    else:
-        if motion_dataset not in env.motion_data_manager.active_terms():
-            raise ValueError(f"Motion dataset '{motion_dataset}' not found in the active terms.")
+    motion_dataset = _resolve_motion_dataset(env, motion_dataset)
     motion_loader = env.motion_data_manager.get_term(motion_dataset)
     motion_ids = motion_loader.sample_motions(num_envs)
-    motion_times = motion_loader.sample_times(motion_ids, truncate_time=dt)
+    motion_times = motion_loader.sample_times(motion_ids, truncate_time_end=dt)
     motion_state_dict = motion_loader.get_motion_state(motion_ids, motion_times)
 
     joint_pos = motion_state_dict["dof_pos"]
@@ -125,3 +124,19 @@ def ref_state_init_dof(
 
     # set into the physics simulation
     asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
+
+
+def _resolve_motion_dataset(env: ManagerBasedAmpEnv, motion_dataset: str | None) -> str:
+    """Resolve the motion-data term used by RSI events."""
+
+    active_terms = env.motion_data_manager.active_terms
+    if motion_dataset is not None:
+        if motion_dataset not in active_terms:
+            raise ValueError(f"Motion dataset '{motion_dataset}' not found in the active terms.")
+        return motion_dataset
+
+    if not active_terms:
+        raise ValueError("No active motion datasets are configured.")
+
+    term_weights = [env.motion_data_manager._term_cfgs[term_name].weight for term_name in active_terms]
+    return random.choices(active_terms, weights=term_weights, k=1)[0]
