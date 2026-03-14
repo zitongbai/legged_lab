@@ -1,59 +1,117 @@
 from __future__ import annotations
 
 import torch
-from typing import Any
-from collections.abc import Sequence
-from isaaclab.envs import ManagerBasedEnv, ManagerBasedRLEnv, VecEnvStepReturn, VecEnvObs
-from isaaclab.managers import ActionManager, ObservationManager, RecorderManager, CommandManager, CurriculumManager, RewardManager, TerminationManager
+from isaaclab.envs import VecEnvStepReturn
+from isaaclab.managers import (
+    ActionManager,
+    CommandManager,
+    CurriculumManager,
+    RecorderManager,
+    RewardManager,
+    TerminationManager,
+)
 
-from legged_lab.managers import MotionDataManager, AnimationManager
+from legged_lab.managers import MotionDataManager, AnimationManager, PreviewObservationManager
 from .manager_based_animation_env import ManagerBasedAnimationEnv
 from .manager_based_amp_env_cfg import ManagerBasedAmpEnvCfg
 
-class ManagerBasedAmpEnv(ManagerBasedAnimationEnv):
-    
-    """AMP Environment for locomotion tasks.
 
-    This class inherits from the `ManagerBasedRLEnv` class and is used to create an environment for
-    training and testing reinforcement learning agents on locomotion tasks using the AMP.
-    
-    In the original ManagerBasedRLEnv's `step` method, observations are lost if the environments are 
-    reset. But in AMP we should record the observations before resetting the environments.
-    This class overrides the `step` method to ensure that observations are retained even when
-    environments are reset.
-    """
+class ManagerBasedAmpEnv(ManagerBasedAnimationEnv):
+    """AMP environment with preview-based terminal observation export."""
 
     cfg: ManagerBasedAmpEnvCfg
-    
+
     def __init__(self, cfg: ManagerBasedAmpEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
 
-    # def _get_amp_observations(self) -> torch.Tensor:
-    #     """Get the AMP observations.
+    def _merge_terminal_obs(
+        self,
+        current_obs: dict[str, torch.Tensor | dict[str, torch.Tensor]],
+        preview_obs: dict[str, torch.Tensor | dict[str, torch.Tensor]],
+        reset_env_ids: torch.Tensor,
+    ) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
+        """Merge pre-reset previews into post-reset observations for terminated envs.
 
-    #     This function retrieves the AMP observations from the observation manager and returns them.
+        The returned structure matches ``current_obs``. For each tensor leaf, rows indexed by
+        ``reset_env_ids`` come from ``preview_obs`` while all other rows remain from ``current_obs``.
+        Nested dictionaries are merged recursively.
+        """
+        terminal_obs = {}
+        for key, value in current_obs.items():
+            if key not in preview_obs:
+                terminal_obs[key] = value
+                continue
+            preview_value = preview_obs[key]
+            if isinstance(value, dict) and isinstance(preview_value, dict):
+                terminal_obs[key] = self._merge_terminal_obs(value, preview_value, reset_env_ids)
+            elif isinstance(value, torch.Tensor) and isinstance(preview_value, torch.Tensor):
+                merged_value = value.clone()
+                merged_value[reset_env_ids] = preview_value[reset_env_ids]
+                terminal_obs[key] = merged_value
+            else:
+                terminal_obs[key] = value
+        return terminal_obs
 
-    #     Returns:
-    #         The AMP observations as a tensor.
-    #     """
+    def _preview_terminal_obs(self) -> dict[str, torch.Tensor | dict[str, torch.Tensor]] | None:
+        """Preview only the configured terminal observation groups before reset."""
+        group_names = tuple(getattr(self.cfg, "terminal_obs_groups", ("disc",)))
+        if not group_names:
+            return None
 
-    #     amp_obs = self.observation_manager.compute_group("amp", update_history=False)
-    #     return amp_obs # (num_envs, history_length, obs_dim)
-    
+        if hasattr(self.observation_manager, "preview_group"):
+            preview_obs = {}
+            for group_name in group_names:
+                preview_obs[group_name] = self.observation_manager.preview_group(group_name)
+            return preview_obs
+
+        if hasattr(self.observation_manager, "preview"):
+            preview_obs = self.observation_manager.preview()
+            return {group_name: preview_obs[group_name] for group_name in group_names}
+
+        return None
+
+    def load_managers(self):
+        """Load AMP-specific managers while swapping in the local preview observation manager."""
+        self.motion_data_manager = MotionDataManager(self.cfg.motion_data, self)
+        print("[INFO] Motion Data Manager: ", self.motion_data_manager)
+        self.animation_manager = AnimationManager(self.cfg.animation, self)
+        print("[INFO] Animation Manager: ", self.animation_manager)
+
+        self.command_manager = CommandManager(self.cfg.commands, self)
+        print("[INFO] Command Manager: ", self.command_manager)
+
+        print("[INFO] Event Manager: ", self.event_manager)
+        self.recorder_manager = RecorderManager(self.cfg.recorders, self)
+        print("[INFO] Recorder Manager: ", self.recorder_manager)
+        self.action_manager = ActionManager(self.cfg.actions, self)
+        print("[INFO] Action Manager: ", self.action_manager)
+        self.observation_manager = PreviewObservationManager(self.cfg.observations, self)
+        print("[INFO] Observation Manager:", self.observation_manager)
+
+        self.termination_manager = TerminationManager(self.cfg.terminations, self)
+        print("[INFO] Termination Manager: ", self.termination_manager)
+        self.reward_manager = RewardManager(self.cfg.rewards, self)
+        print("[INFO] Reward Manager: ", self.reward_manager)
+        self.curriculum_manager = CurriculumManager(self.cfg.curriculum, self)
+        print("[INFO] Curriculum Manager: ", self.curriculum_manager)
+
+        self._configure_gym_env_spaces()
+
+        if "startup" in self.event_manager.available_modes:
+            self.event_manager.apply(mode="startup")
+
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
-        """Execute one time-step of the environment's dynamics and reset terminated environments.
-        
-        This function is almost identical to the parent class, except that:
-            In the parent class's method, the observations are computed after the reset, which leads to
-            the loss of observations for the reset environments. In this class, we compute the AMP observations
-            before the reset and update the observations for the reset environments. 
+        """Step the environment and expose terminal observations in ``extras``.
+
+        This follows the parent implementation closely, but captures a non-mutating preview of the
+        observations before reset and merges those values back for terminated environments into
+        ``extras["terminal_obs"]``. The main ``obs`` return value keeps the normal post-reset semantics.
 
         Args:
-            action: The actions to apply on the environment. Shape is (num_envs, action_dim).
+            action: Actions to apply on the environment. Shape is ``(num_envs, action_dim)``.
 
         Returns:
-            A tuple containing the observations, rewards, resets (terminated and truncated) and extras.
-            The AMP observations are included in the observations dictionary under the key "amp".
+            Observations, rewards, terminated flags, timeout flags, and extras.
         """
         # process actions
         self.action_manager.process_action(action.to(self.device))
@@ -94,16 +152,18 @@ class ManagerBasedAmpEnv(ManagerBasedAnimationEnv):
         self.reset_time_outs = self.termination_manager.time_outs
         # -- reward computation
         self.reward_buf = self.reward_manager.compute(dt=self.step_dt)
-        # # -- update AMP observations
-        # amp_obs = self._get_amp_observations()
 
         if len(self.recorder_manager.active_terms) > 0:
             # update observations for recording if needed
             self.obs_buf = self.observation_manager.compute()
             self.recorder_manager.record_post_step()
 
-        # -- reset envs that terminated/timed-out and log the episode information
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        terminal_obs_preview = None
+        if len(reset_env_ids) > 0:
+            terminal_obs_preview = self._preview_terminal_obs()
+
+        # -- reset envs that terminated/timed-out and log the episode information
         if len(reset_env_ids) > 0:
             # trigger recorder terms for pre-reset calls
             self.recorder_manager.record_pre_reset(reset_env_ids)
@@ -128,9 +188,19 @@ class ManagerBasedAmpEnv(ManagerBasedAnimationEnv):
         # -- compute observations
         # note: done after reset to get the correct observations for reset envs
         self.obs_buf = self.observation_manager.compute(update_history=True)
-        # if len(reset_env_ids) > 0:
-        #     self.obs_buf["amp"][reset_env_ids] = amp_obs[reset_env_ids]
+        terminal_obs = None
+        if terminal_obs_preview is not None:
+            for group_name in terminal_obs_preview:
+                if group_name not in self.obs_buf:
+                    raise KeyError(
+                        f"Configured terminal observation group '{group_name}' is not present in current observations."
+                    )
+            current_terminal_groups = {group_name: self.obs_buf[group_name] for group_name in terminal_obs_preview}
+            terminal_obs = self._merge_terminal_obs(current_terminal_groups, terminal_obs_preview, reset_env_ids)
+        if terminal_obs is not None:
+            self.extras["terminal_obs"] = terminal_obs
+        else:
+            self.extras.pop("terminal_obs", None)
         
         # return observations, rewards, resets and extras
         return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras
-

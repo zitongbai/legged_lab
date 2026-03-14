@@ -37,8 +37,8 @@ class RslRlPpoActorCriticConv2dCfg(RslRlPpoActorCriticCfg):
 class RslRlPpoAmpAlgorithmCfg(RslRlPpoAlgorithmCfg):
     """Configuration for the AMP algorithm."""
     
-    class_name: str = "PPOAmp"
-    """The algorithm class name. Default is PPOAmp."""
+    class_name: str = "PPOAMP"
+    """The algorithm class name. Default is PPOAMP."""
 
     amp_cfg: RslRlAmpCfg = RslRlAmpCfg()
     """Configuration for the AMP (Adversarial Motion Priors) in the training."""

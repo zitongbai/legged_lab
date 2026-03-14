@@ -168,6 +168,7 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
         # -----------------------------------------------------
         # Observations
         # -----------------------------------------------------
+        self.terminal_obs_groups = ("disc",)
         
         # policy observations
         
@@ -257,4 +258,3 @@ class G1AmpEnvCfg_PLAY(G1AmpEnvCfg):
         self.commands.base_velocity.ranges.heading = (0.0, 0.0)
         
         self.events.reset_from_ref = None
-
