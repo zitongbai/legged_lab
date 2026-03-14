@@ -133,15 +133,35 @@ class MySceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    target_position = mdp.TerrainBasedPoseCommandCfg(
+    target_position = mdp.PoseVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(6.0, 6.0),
-        simple_heading=True,
-        debug_vis=True,
-        min_dist=1.0,
-        ranges=mdp.TerrainBasedPoseCommandCfg.Ranges(
-            pos_x=(-4.5, 4.5), pos_y=(-4.5, 4.5), heading=(-math.pi, math.pi)
-        ),
+        resampling_time_range=(8.0, 12.0),
+        debug_vis=False,
+        velocity_control_stiffness=2.0,
+        heading_control_stiffness=2.0,
+        rel_standing_envs=0.05,
+        ranges=mdp.PoseVelocityCommandCfg.Ranges(lin_vel_x=(0.0, 0.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(-1.0, 1.0)),
+        random_velocity_terrain=["perlin_rough_stand"],
+        velocity_ranges={
+            "perlin_rough": {"lin_vel_x": (0.45, 1.0), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "perlin_rough_stand": {"lin_vel_x": (0.0, 0.0), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (0.0, 0.0)},
+            "square_gaps": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "pyramid_stairs": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "pyramid_stairs_high": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "pyramid_stairs_inv": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "pyramid_stairs_inv_high": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
+            "boxes": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "mesh_boxes": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "hf_pyramid_slope_inv": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+        },
+        only_positive_lin_vel_x=True,
+        lin_vel_threshold=0.0,
+        ang_vel_threshold=0.0,
+        target_dis_threshold=0.4,
     )
 
 
