@@ -183,6 +183,9 @@ Please refer to the comments in the script for more details about the arguments,
 <a id="training-and-play"></a>
 ### 2. Training & Play
 
+<a id="g1"></a>
+### G1
+
 #### 🎭 DeepMimic
 
 <details>
@@ -241,6 +244,71 @@ You can play the trained model in a headless mode and record the video:
 ```bash
 # replace the checkpoint path with the path to your trained model
 python scripts/rsl_rl/play.py --task LeggedLab-Isaac-AMP-G1-v0 --headless --num_envs 64 --video --checkpoint logs/rsl_rl/experiment_name/run_name/model_xxx.pt
+```
+
+The video will be saved in the `logs/rsl_rl/experiment_name/run_name/videos/play` directory.
+
+</details>
+
+<a id="go2"></a>
+### Go2
+
+#### Local Navigation
+
+<details>
+<summary>Train</summary>
+
+To train on different terrains, you can run the following command:
+
+```bash
+python scripts/rsl_rl/train.py --task=Lab-Position-Rough-Unitree-Go2-v0 --headless --device cuda:x agent.device=cuda:x
+```
+
+If you want to train it using symmetry data augmentation, you can run the following command:
+
+```bash
+python scripts/rsl_rl/train.py --task=Lab-Position-Rough-Unitree-Go2-v0 --headless --agent=rsl_rl_with_symmetry_cfg_entry_point --run_name=with_symmetry
+```
+
+For more types of terrains, you can replace "Rough" with "Pit" or "Gap" in the commands above.
+
+</details>
+
+<details>
+<summary>Play</summary>
+
+You can play the trained model in a headless mode and record the video: 
+
+```bash
+# replace the checkpoint path with the path to your trained model
+python scripts/rsl_rl/play.py --task=Lab-Position-Rough-Unitree-Go2-Play-v0 --headless --video --checkpoint logs/rsl_rl/experiment_name/run_name/model_xxx.pt
+```
+
+</details>
+
+#### 🏃 Local Navigation with Adversarial Motion Priors (AMP)
+
+<details>
+<summary>Train</summary>
+
+To train the AMP algorithm, you can run the following command:
+
+```bash
+python scripts/rsl_rl/train.py --task Lab-Position-Rough-AMP-Go2-v0 --headless --max_iterations 50000
+```
+
+For more types of terrains, you can replace "Rough" with "Pit" or "Gap" in the commands above.
+
+</details>
+
+<details>
+<summary>Play</summary>
+
+You can play the trained model in a headless mode and record the video: 
+
+```bash
+# replace the checkpoint path with the path to your trained model
+python scripts/rsl_rl/play.py --task Lab-Position-Rough-AMP-Go2-Play-v0 --headless --video --checkpoint logs/rsl_rl/experiment_name/run_name/model_xxx.pt
 ```
 
 The video will be saved in the `logs/rsl_rl/experiment_name/run_name/videos/play` directory.
