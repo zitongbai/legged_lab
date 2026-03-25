@@ -6,7 +6,7 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Tutorial on running the cartpole RL environment.")
 parser.add_argument("--num_envs", type=int, default=4, help="Number of environments to spawn.")
 parser.add_argument(
-    "--robot", 
+    "--robot",
     type=str,
     default="g1_29dof",
     help="The robot name to be used.",
@@ -22,6 +22,7 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 import torch
+
 from isaaclab.assets import Articulation
 
 from legged_lab.envs import ManagerBasedAnimationEnv
@@ -37,26 +38,24 @@ else:
 
 def main():
     env_cfg = AnimEnvCfg()
-    
+
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
-    
+
     env = ManagerBasedAnimationEnv(cfg=env_cfg)
     robot_anim: Articulation = env.scene["robot_anim"]
     num_dofs = len(robot_anim.data.joint_names)
-    
-    
+
     env.reset()
-    
+
     while simulation_app.is_running():
         with torch.inference_mode():
             action = torch.zeros((env.num_envs, num_dofs), device=env.device)
             env.step(action)
-            
+
     env.close()
-    
+
+
 if __name__ == "__main__":
     main()
     simulation_app.close()
-            
-    

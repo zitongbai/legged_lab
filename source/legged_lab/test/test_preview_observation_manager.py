@@ -9,6 +9,8 @@ from isaaclab.utils import configclass
 
 from legged_lab.managers import PreviewObservationManager
 
+assert simulation_app is not None
+
 
 class _FakeSim:
     def is_playing(self) -> bool:
@@ -70,7 +72,9 @@ def test_preview_history_includes_current_obs_without_mutating_buffer() -> None:
     )
     assert torch.equal(preview["history"], expected_preview)
     assert torch.equal(obs_manager._group_obs_term_history_buffer["policy"]["history"].buffer, history_buffer_before)
-    assert torch.equal(obs_manager._group_obs_term_history_buffer["policy"]["history"].current_length, current_length_before)
+    assert torch.equal(
+        obs_manager._group_obs_term_history_buffer["policy"]["history"].current_length, current_length_before
+    )
 
 
 def test_preview_non_history_term_matches_processed_observation() -> None:

@@ -1,7 +1,7 @@
 """
 This module provides functionality to convert motion data from GMR format to Legged Lab format.
 
-Ref: 
+Ref:
     - https://github.com/xbpeng/MimicKit/blob/main/tools/gmr_to_mimickit/gmr_to_mimickit.py
     - https://github.com/HybridRobotics/whole_body_tracking/blob/main/scripts/csv_to_npz.py
 
@@ -9,7 +9,7 @@ What does this script do?
     - Reorder the dof data from GMR (in mujoco order) to Legged Lab (in Isaac Lab order).
     - Add loop mode to the motion data.
 
-Usage: 
+Usage:
     Command line:
         python scripts/tools/retarget/gmr_to_lab.py \
             --robot g1 \
@@ -18,24 +18,24 @@ Usage:
             --config_file <path_to_config_file> \
             [--loop {wrap,clamp}] \
             [--frame_range START END]
-    
+
     Required arguments:
         --robot: Robot name to be used (default: g1).
         --input_file: Path to the input GMR motion file (pickle format).
         --output_file: Path to save the converted motion data (pickle format).
         --config_file: Path to the configuration file (yaml format).
                       Should contain: gmr_dof_names, lab_dof_names, lab_key_body_names
-    
+
     Optional arguments:
         --loop {wrap,clamp}     Loop mode for the motion (default: clamp).
         --frame_range START END Frame range to extract.
                                If not provided, all frames will be processed.
                                Example: --frame_range 10 100
-    
+
     AppLauncher arguments:
         --headless              Run without GUI.
         --device {cpu,cuda:0}   Device to use for simulation (default: cuda:0).
-    
+
     Example:
         # Convert full motion with GUI
         python scripts/tools/retarget/gmr_to_lab.py \
@@ -43,7 +43,7 @@ Usage:
             --input_file data/gmr/walk.pkl \
             --output_file data/lab/walk.pkl \
             --config_file scripts/tools/retarget/g1_29dof.yaml
-        
+
         # Convert specific frame range without GUI
         python scripts/tools/retarget/gmr_to_lab.py \
             --robot g1 \
@@ -65,16 +65,14 @@ GMR Format:
 
 """
 
-
-
 import argparse
 
 from isaaclab.app import AppLauncher
 
 # add argparse arguments
-parser = argparse.ArgumentParser(description="Visulization of retargeted data.")
+parser = argparse.ArgumentParser(description="Visualization of retargeted data.")
 parser.add_argument(
-    "--robot", 
+    "--robot",
     type=str,
     default="g1",
     help="The robot name to be used.",
@@ -92,7 +90,7 @@ parser.add_argument(
     help="Path to save the converted motion data (pickle format).",
 )
 parser.add_argument(
-    "--config_file", 
+    "--config_file",
     type=str,
     required=True,
     help="Path to the configuration file (yaml format).",
@@ -109,10 +107,7 @@ parser.add_argument(
     nargs=2,
     type=int,
     metavar=("START", "END"),
-    help=(
-        "frame range: START END (both inclusive). If not provided, all frames will be"
-        " loaded."
-    ),
+    help="frame range: START END (both inclusive). If not provided, all frames will be loaded.",
 )
 
 # append AppLauncher cli args
@@ -126,14 +121,9 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import os
-import sys
-import numpy as np
 import pickle
-import argparse
-import enum
+import sys
 import yaml
-import torch
 from pathlib import Path
 
 import isaaclab.sim as sim_utils
@@ -153,29 +143,23 @@ script_dir = Path(__file__).parent
 sys.path.insert(0, str(script_dir))
 
 try:
-    from gmr_to_lab import (
-        LoopMode,
-        extract_gmr_data,
-        run_simulator,
-        ReplayMotionsSceneCfg,
-    )
+    from gmr_to_lab import LoopMode, ReplayMotionsSceneCfg, extract_gmr_data, run_simulator
 except ImportError as e:
     print(f"Error importing from gmr_to_lab.py: {e}")
     print("Make sure gmr_to_lab.py is in the same directory as this script.")
     raise
 
 
-
 if __name__ == "__main__":
-    with open(args_cli.config_file, 'r') as f:
+    with open(args_cli.config_file) as f:
         config = yaml.safe_load(f)
-    
-    gmr_dof_names = config['gmr_dof_names']
-    lab_dof_names = config['lab_dof_names']
-    lab_key_body_names = config['lab_key_body_names']
-    
+
+    gmr_dof_names = config["gmr_dof_names"]
+    lab_dof_names = config["lab_dof_names"]
+    lab_key_body_names = config["lab_key_body_names"]
+
     loop_mode = LoopMode.CLAMP if args_cli.loop == "clamp" else LoopMode.WRAP
-    
+
     motion_data_dict = extract_gmr_data(
         gmr_file_path=args_cli.input_file,
         gmr_dof_names=gmr_dof_names,
@@ -184,42 +168,42 @@ if __name__ == "__main__":
         start_frame=args_cli.frame_range[0] if args_cli.frame_range else 0,
         end_frame=args_cli.frame_range[1] if args_cli.frame_range else -1,
     )
-    
-    fps = motion_data_dict['fps']
+
+    fps = motion_data_dict["fps"]
     dt = 1.0 / fps
-    
+
     sim = sim_utils.SimulationContext(sim_utils.SimulationCfg(dt=dt, device=args_cli.device))
     scene_cfg = ReplayMotionsSceneCfg(
-        num_envs=1, 
-        env_spacing=3.0,
-        robot=ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")    
+        num_envs=1, env_spacing=3.0, robot=ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
     )
     scene = InteractiveScene(scene_cfg)
-    
+
     # Set main camera
     sim.set_camera_view([2.0, 0.0, 2.5], [-0.5, 0.0, 0.5])
-    
+
     sim.reset()
     print("Simulation starting ...")
-    
+
     motion_data_dicts = [motion_data_dict]
     motion_data_dicts = run_simulator(simulation_app, sim, scene, motion_data_dicts, lab_key_body_names)
-    
+
     motion_data_dict = motion_data_dicts[0]
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print("💾 SAVING CONVERTED DATA")
-    print("="*60)
+    print("=" * 60)
     print(f"📁 Output File: {args_cli.output_file}")
-    print(f"🧮 Number of Frames: {args_cli.frame_range[1] - args_cli.frame_range[0] if args_cli.frame_range else 'All'}")
+    print(
+        f"🧮 Number of Frames: {args_cli.frame_range[1] - args_cli.frame_range[0] if args_cli.frame_range else 'All'}"
+    )
     print(f"🔁 Loop Mode: {loop_mode.name}")
-    print("="*60 + "\n")
-    
-    with open(args_cli.output_file, 'wb') as f:
+    print("=" * 60 + "\n")
+
+    with open(args_cli.output_file, "wb") as f:
         pickle.dump(motion_data_dict, f)
     print("✅ Data saved successfully.")
-    print("="*60 + "\n")
-    
+    print("=" * 60 + "\n")
+
     print("Closing simulation app...")
     simulation_app.close()
-    print(f"✅ Simulation app closed.")
+    print("✅ Simulation app closed.")

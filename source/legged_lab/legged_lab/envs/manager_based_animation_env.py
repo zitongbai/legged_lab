@@ -1,28 +1,28 @@
 from __future__ import annotations
 
 import torch
-from typing import Any
 from collections.abc import Sequence
-from isaaclab.envs import ManagerBasedEnv, ManagerBasedRLEnv, VecEnvStepReturn, VecEnvObs
-from isaaclab.managers import ActionManager, ObservationManager, RecorderManager, CommandManager, CurriculumManager, RewardManager, TerminationManager
 
-from legged_lab.managers import MotionDataManager, AnimationManager
+from isaaclab.envs import ManagerBasedRLEnv, VecEnvStepReturn
+
+from legged_lab.managers import AnimationManager, MotionDataManager
+
 from .manager_based_animation_env_cfg import ManagerBasedAnimationEnvCfg
 
+
 class ManagerBasedAnimationEnv(ManagerBasedRLEnv):
-    
     cfg: ManagerBasedAnimationEnvCfg
-    
+
     def __init__(self, cfg: ManagerBasedAnimationEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
-    
+
     def load_managers(self):
         self.motion_data_manager = MotionDataManager(self.cfg.motion_data, self)
         print("[INFO] Motion Data Manager: ", self.motion_data_manager)
         self.animation_manager = AnimationManager(self.cfg.animation, self)
         print("[INFO] Animation Manager: ", self.animation_manager)
         super().load_managers()
-        
+
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         """Execute one time-step of the environment's dynamics and reset terminated environments.
 
@@ -68,7 +68,7 @@ class ManagerBasedAnimationEnv(ManagerBasedRLEnv):
                 self.sim.render()
             # update buffers at sim dt
             self.scene.update(dt=self.physics_dt)
-        
+
         # post-step:
         # -- update animation manager
         self.animation_manager.update(dt=self.step_dt)
@@ -114,15 +114,8 @@ class ManagerBasedAnimationEnv(ManagerBasedRLEnv):
         # return observations, rewards, resets and extras
         return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras
 
-
     def _reset_idx(self, env_ids: Sequence[int]):
         # -- animation manager
-        info = self.animation_manager.reset(env_ids)
-        
+        self.animation_manager.reset(env_ids)
+
         super()._reset_idx(env_ids)
-        
-
-
-
-
-

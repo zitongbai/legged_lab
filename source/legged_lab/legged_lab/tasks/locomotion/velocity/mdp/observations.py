@@ -14,9 +14,9 @@ def height_scan_ch(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, offset: flo
     """Height scan from the given sensor w.r.t. the sensor's frame.
 
     The provided offset (Defaults to 0.5) is subtracted from the returned values.
-    
+
     add a channel dimension to the output tensor, so that it can be used as a 2D image
-    
+
     ref: isaaclab.envs.mdp.observations.height_scan
     """
     # extract the used quantities (to enable type-hinting)
@@ -37,18 +37,18 @@ def height_scan_ch(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, offset: flo
     * "xy" ordering: :math:`[(0, 3), (1, 3), (2, 3), (1, 4), (2, 4), (2, 4)]`
     * "yx" ordering: :math:`[(0, 3), (0, 4), (1, 3), (1, 4), (2, 3), (2, 4)]`
     """
-    
-    shape = sensor.cfg.shape    # define in RayCasterArrayCfg
-    
+
+    shape = sensor.cfg.shape  # define in RayCasterArrayCfg
+
     # height scan: height = sensor_height - hit_point_z - offset
-    scan =  sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - offset
-    
+    scan = sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - offset
+
     # TODO: check
     if ordering == "yx":
-        scan = scan.reshape( -1 ,shape[0], shape[1])
+        scan = scan.reshape(-1, shape[0], shape[1])
     elif ordering == "xy":
         scan = scan.reshape(-1, shape[1], shape[0]).transpose(1, 2)
     else:
         raise ValueError(f"Invalid ordering: {ordering}. Expected 'xy' or 'yx'.")
-    
+
     return scan.unsqueeze(-1)  # add a channel dimension to the output tensor

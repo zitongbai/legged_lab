@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import torch
+from types import SimpleNamespace
 
 from _isaaclab_test_app import simulation_app
 
 from legged_lab.envs.manager_based_amp_env import ManagerBasedAmpEnv
+
+assert simulation_app is not None
 
 
 def test_load_managers_uses_preview_observation_manager(monkeypatch) -> None:

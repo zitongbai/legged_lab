@@ -1,5 +1,4 @@
 from .manager_based_amp_env import ManagerBasedAmpEnv
 from .manager_based_amp_env_cfg import ManagerBasedAmpEnvCfg
-
 from .manager_based_animation_env import ManagerBasedAnimationEnv
 from .manager_based_animation_env_cfg import ManagerBasedAnimationEnvCfg

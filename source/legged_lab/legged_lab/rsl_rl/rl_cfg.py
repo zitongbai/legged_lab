@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import MISSING
-
 from isaaclab.utils import configclass
+from isaaclab_rl.rsl_rl import RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 
-from isaaclab_rl.rsl_rl import RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg, RslRlOnPolicyRunnerCfg
 from .amp_cfg import RslRlAmpCfg
 
 #########################
 # Policy configurations #
 #########################
+
 
 @configclass
 class RslRlPpoActorCriticConv2dCfg(RslRlPpoActorCriticCfg):
@@ -28,6 +27,7 @@ class RslRlPpoActorCriticConv2dCfg(RslRlPpoActorCriticCfg):
     conv_linear_output_size: int = 16
     """Output size of the linear layer after the convolutional features are flattened."""
 
+
 ############################
 # Algorithm configurations #
 ############################
@@ -36,7 +36,7 @@ class RslRlPpoActorCriticConv2dCfg(RslRlPpoActorCriticCfg):
 @configclass
 class RslRlPpoAmpAlgorithmCfg(RslRlPpoAlgorithmCfg):
     """Configuration for the AMP algorithm."""
-    
+
     class_name: str = "PPOAMP"
     """The algorithm class name. Default is PPOAMP."""
 
@@ -47,5 +47,3 @@ class RslRlPpoAmpAlgorithmCfg(RslRlPpoAlgorithmCfg):
 #########################
 # Runner configurations #
 #########################
-
-    

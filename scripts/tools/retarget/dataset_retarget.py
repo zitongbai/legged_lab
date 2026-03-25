@@ -19,10 +19,10 @@ This script intentionally does NOT support start/end frame clipping; it converts
 """
 
 import argparse
-import os
-from pathlib import Path
-import yaml
 import pickle
+import warnings
+import yaml
+from pathlib import Path
 
 from isaaclab.app import AppLauncher
 
@@ -69,9 +69,7 @@ simulation_app = app_launcher.app
 
 
 import sys
-import numpy as np
-import torch
-import warnings
+
 import isaaclab.sim as sim_utils
 from isaaclab.scene import InteractiveScene
 
@@ -85,7 +83,7 @@ else:
 script_dir = Path(__file__).parent
 sys.path.insert(0, str(script_dir))
 try:
-    from gmr_to_lab import LoopMode, extract_gmr_data, run_simulator, ReplayMotionsSceneCfg
+    from gmr_to_lab import LoopMode, ReplayMotionsSceneCfg, extract_gmr_data, run_simulator
 except ImportError as e:
     print(f"Error importing from gmr_to_lab.py: {e}")
     raise
@@ -101,12 +99,12 @@ def list_input_files(input_dir: str):
 
 def main():
     # read config
-    with open(args_cli.config_file, 'r') as f:
+    with open(args_cli.config_file) as f:
         config = yaml.safe_load(f)
 
-    gmr_dof_names = config['gmr_dof_names']
-    lab_dof_names = config['lab_dof_names']
-    lab_key_body_names = config['lab_key_body_names']
+    gmr_dof_names = config["gmr_dof_names"]
+    lab_dof_names = config["lab_dof_names"]
+    lab_key_body_names = config["lab_key_body_names"]
 
     loop_mode = LoopMode.CLAMP if args_cli.loop == "clamp" else LoopMode.WRAP
 
@@ -135,7 +133,7 @@ def main():
         )
         motion_data_dicts.append(motion)
         input_names.append(p.name)
-        fps_values.append(motion['fps'])
+        fps_values.append(motion["fps"])
 
     # check fps consistency
     if not all(f == fps_values[0] for f in fps_values):
@@ -166,7 +164,7 @@ def main():
     print("Saving converted motions to output directory...")
     for name, motion in zip(input_names, motion_data_dicts):
         out_path = Path(args_cli.output_dir) / name
-        with open(out_path, 'wb') as f:
+        with open(out_path, "wb") as f:
             pickle.dump(motion, f)
         print(f"Saved: {out_path}")
 
@@ -175,5 +173,5 @@ def main():
     print("Done.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
