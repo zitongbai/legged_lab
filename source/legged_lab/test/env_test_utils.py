@@ -1,0 +1,234 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""Shared test utilities for Isaac Lab environments."""
+
+import gymnasium as gym
+import os
+import torch
+
+import carb
+import omni.usd
+import pytest
+from isaacsim.core.version import get_version
+
+from isaaclab.envs.utils.spaces import sample_space
+from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
+
+
+def setup_environment(
+    include_play: bool = False,
+    factory_envs: bool | None = None,
+    multi_agent: bool | None = None,
+) -> list[str]:
+    """
+    Acquire all registered Isaac environment task IDs with optional filters.
+
+    Args:
+        include_play: If True, include environments ending in 'Play-v0'.
+        factory_envs:
+            - True: include only Factory environments
+            - False: exclude Factory environments
+            - None: include both Factory and non-Factory environments
+        multi_agent:
+            - True: include only multi-agent environments
+            - False: include only single-agent environments
+            - None: include all environments regardless of agent type
+
+    Returns:
+        A sorted list of task IDs matching the selected filters.
+    """
+    # disable interactive mode for wandb for automate environments
+    os.environ["WANDB_DISABLED"] = "true"
+
+    # acquire all Isaac environment names
+    registered_tasks = []
+    for task_spec in gym.registry.values():
+        # only consider Legged Lab Isaac environments
+        if not task_spec.id.startswith("LeggedLab-Isaac-"):
+            continue
+
+        # filter Play environments, if needed
+        if not include_play and task_spec.id.endswith("Play-v0"):
+            continue
+
+        # no Factory environments currently exist in this repository, but keep the
+        # parameter for compatibility with the upstream test design.
+        if factory_envs is True:
+            continue
+
+        # apply multi agent filter
+        if multi_agent is not None:
+            # parse config
+            env_cfg = parse_env_cfg(task_spec.id)
+            if (multi_agent is True and not hasattr(env_cfg, "possible_agents")) or (
+                multi_agent is False and hasattr(env_cfg, "possible_agents")
+            ):
+                continue
+        # if None: no filter
+
+        registered_tasks.append(task_spec.id)
+
+    # sort environments alphabetically
+    registered_tasks.sort()
+
+    # this flag is necessary to prevent a bug where the simulation gets stuck randomy when running many environments
+    carb.settings.get_settings().set_bool("/physics/cooking/ujitsoCollisionCooking", False)
+
+    print(">>> All registered environments:", registered_tasks)
+
+    return registered_tasks
+
+
+def _run_environments(
+    task_name,
+    device,
+    num_envs,
+    num_steps=100,
+    multi_agent=False,
+    create_stage_in_memory=False,
+    disable_clone_in_fabric=False,
+):
+    """Run all environments and check environments return valid signals.
+
+    Args:
+        task_name: Name of the environment.
+        device: Device to use (e.g., 'cuda').
+        num_envs: Number of environments.
+        num_steps: Number of simulation steps.
+        multi_agent: Whether the environment is multi-agent.
+        create_stage_in_memory: Whether to create stage in memory.
+        disable_clone_in_fabric: Whether to disable fabric cloning.
+    """
+
+    # skip test if stage in memory is not supported
+    isaac_sim_version = float(".".join(get_version()[2]))
+    if isaac_sim_version < 5 and create_stage_in_memory:
+        pytest.skip("Stage in memory is not supported in this version of Isaac Sim")
+
+    print(f""">>> Running test for environment: {task_name}""")
+    _check_random_actions(
+        task_name,
+        device,
+        num_envs,
+        num_steps=num_steps,
+        multi_agent=multi_agent,
+        create_stage_in_memory=create_stage_in_memory,
+        disable_clone_in_fabric=disable_clone_in_fabric,
+    )
+    print(f""">>> Closing environment: {task_name}""")
+    print("-" * 80)
+
+
+def _check_random_actions(
+    task_name: str,
+    device: str,
+    num_envs: int,
+    num_steps: int = 100,
+    multi_agent: bool = False,
+    create_stage_in_memory: bool = False,
+    disable_clone_in_fabric: bool = False,
+):
+    """Run random actions and check environments return valid signals.
+
+    Args:
+        task_name: Name of the environment.
+        device: Device to use (e.g., 'cuda').
+        num_envs: Number of environments.
+        num_steps: Number of simulation steps.
+        multi_agent: Whether the environment is multi-agent.
+        create_stage_in_memory: Whether to create stage in memory.
+        disable_clone_in_fabric: Whether to disable fabric cloning.
+    """
+    # create a new context stage, if stage in memory is not enabled
+    if not create_stage_in_memory:
+        omni.usd.get_context().new_stage()
+
+    # reset the rtx sensors carb setting to False
+    carb.settings.get_settings().set_bool("/isaaclab/render/rtx_sensors", False)
+    try:
+        # parse config
+        env_cfg = parse_env_cfg(task_name, device=device, num_envs=num_envs)
+        # set config args
+        env_cfg.sim.create_stage_in_memory = create_stage_in_memory
+        if disable_clone_in_fabric:
+            env_cfg.scene.clone_in_fabric = False
+
+        # filter based off multi agents mode and create env
+        if multi_agent:
+            if not hasattr(env_cfg, "possible_agents"):
+                print(f"[INFO]: Skipping {task_name} as it is not a multi-agent task")
+                return
+            env = gym.make(task_name, cfg=env_cfg)
+        else:
+            if hasattr(env_cfg, "possible_agents"):
+                print(f"[INFO]: Skipping {task_name} as it is a multi-agent task")
+                return
+            env = gym.make(task_name, cfg=env_cfg)
+
+    except Exception as e:
+        # try to close environment on exception
+        if "env" in locals() and hasattr(env, "_is_closed"):
+            env.close()
+        else:
+            if hasattr(e, "obj") and hasattr(e.obj, "_is_closed"):
+                e.obj.close()
+        pytest.fail(f"Failed to set-up the environment for task {task_name}. Error: {e}")
+
+    # disable control on stop
+    env.unwrapped.sim._app_control_on_stop_handle = None  # type: ignore
+
+    # reset environment
+    obs, _ = env.reset()
+
+    # check signal
+    assert _check_valid_tensor(obs)
+
+    # simulate environment for num_steps
+    with torch.inference_mode():
+        for _ in range(num_steps):
+            # sample actions according to the defined space
+            if multi_agent:
+                actions = {
+                    agent: sample_space(
+                        env.unwrapped.action_spaces[agent], device=env.unwrapped.device, batch_size=num_envs
+                    )
+                    for agent in env.unwrapped.possible_agents
+                }
+            else:
+                actions = sample_space(
+                    env.unwrapped.single_action_space, device=env.unwrapped.device, batch_size=num_envs
+                )
+            # apply actions
+            transition = env.step(actions)
+            # check signals
+            for data in transition[:-1]:  # exclude info
+                if multi_agent:
+                    for agent, agent_data in data.items():
+                        assert _check_valid_tensor(agent_data), f"Invalid data ('{agent}'): {agent_data}"
+                else:
+                    assert _check_valid_tensor(data), f"Invalid data: {data}"
+
+    # close environment
+    env.close()
+
+
+def _check_valid_tensor(data: torch.Tensor | dict) -> bool:
+    """Checks if given data does not have corrupted values.
+
+    Args:
+        data: Data buffer.
+
+    Returns:
+        True if the data is valid.
+    """
+    if isinstance(data, torch.Tensor):
+        return not torch.any(torch.isnan(data))
+    elif isinstance(data, (tuple, list)):
+        return all(_check_valid_tensor(value) for value in data)
+    elif isinstance(data, dict):
+        return all(_check_valid_tensor(value) for value in data.values())
+    else:
+        raise ValueError(f"Input data of invalid type: {type(data)}.")
