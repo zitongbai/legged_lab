@@ -497,8 +497,7 @@ if __name__ == '__main__':
     class Sim2SimCfg:
 
         class sim_config:
-            if args.terrain:
-                mujoco_model_path = f'sim2sim/assets/g1/mjcf/g1.xml'
+            mujoco_model_path = f'sim2sim/assets/g1/mjcf/g1.xml'
             sim_duration = 1000000.0
             dt = 0.005
             decimation = 4
