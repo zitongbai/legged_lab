@@ -1,7 +1,8 @@
-import joblib
+import argparse
 import os
 
-import argparse
+import joblib
+
 parser = argparse.ArgumentParser(description="Print motion names from a motion file.")
 parser.add_argument(
     "--robot",
@@ -29,4 +30,3 @@ motion_names = list(motion_data_dict.keys())
 print("Motion names:")
 for name in motion_names:
     print(f'"{name}"')
-    

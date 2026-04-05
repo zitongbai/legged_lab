@@ -1,6 +1,5 @@
 import argparse
 
-from idna import encode
 from isaaclab.app import AppLauncher
 
 # add argparse arguments
@@ -26,15 +25,14 @@ from legged_lab.tasks.locomotion.velocity.config.go2.scandots_rough_env_cfg impo
 
 
 def main():
-    
     env_cfg = UnitreeGo2ScandotsRoughEnvCfg()
 
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
     env_cfg.scene.height_scanner.debug_vis = True
-    
+
     env = ManagerBasedRLEnv(cfg=env_cfg)
-    
+
     count = 0
     obs, _ = env.reset()
     while simulation_app.is_running():
@@ -43,22 +41,20 @@ def main():
                 count = 0
                 obs, _ = env.reset()
 
-                print("-"* 80)
+                print("-" * 80)
                 print("Resetting envs")
-                
+
                 scan = obs["sensor"]
                 print("scan shape:", scan.shape)
-                
+
             action = torch.randn_like(env.action_manager.action)
             obs, rew, terminated, truncated, info = env.step(action)
-            
-            count +=1
-    
+
+            count += 1
+
     env.close()
+
 
 if __name__ == "__main__":
     main()
-    simulation_app.close()            
-
-
-
+    simulation_app.close()

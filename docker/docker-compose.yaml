@@ -12,7 +12,7 @@ x-default-environment: &default-environment
 services:
   legged-lab:
     env_file: .env.base
-    image: ${ISAACLAB_IMAGE:-nvcr.io/nvidia/isaac-lab:2.3.2}
+    image: ${ISAACLAB_IMAGE:-nvcr.io/nvidia/isaac-lab:2.3.1}
     container_name: ${CONTAINER_NAME:-legged-lab}
     network_mode: host
     gpus: all

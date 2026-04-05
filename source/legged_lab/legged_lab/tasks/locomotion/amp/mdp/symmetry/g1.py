@@ -1,4 +1,3 @@
-
 """Functions to specify the symmetry in the observation and action space for Unitree G1 29dof."""
 
 from __future__ import annotations
@@ -39,17 +38,17 @@ def compute_symmetric_states(
         batch_size = obs.batch_size[0]
         # since we have 2 different symmetries, we need to augment the batch size by 2
         obs_aug = obs.repeat(2)
-        
+
         # policy observation group
         # -- original
         obs_aug["policy"][:batch_size] = obs["policy"][:]
         # -- left-right
-        obs_aug["policy"][batch_size:2*batch_size] = _transform_policy_obs_left_right(
+        obs_aug["policy"][batch_size : 2 * batch_size] = _transform_policy_obs_left_right(
             env.unwrapped, obs["policy"][:]
         )
     else:
-        obs_aug = None 
-        
+        obs_aug = None
+
     if actions is not None:
         batch_size = actions.shape[0]
         # since we have 2 different symmetries, we need to augment the batch size by 2
@@ -60,7 +59,7 @@ def compute_symmetric_states(
         actions_aug[batch_size : 2 * batch_size] = _transform_actions_left_right(actions)
     else:
         actions_aug = None
-        
+
     return obs_aug, actions_aug
 
 
@@ -89,7 +88,7 @@ def _transform_policy_obs_left_right(env: ManagerBasedRLEnv, obs: torch.Tensor) 
     # copy observation tensor
     obs = obs.clone()
     device = obs.device
-    joint_num = 29 # G1 29dof
+    joint_num = 29  # G1 29dof
     key_body_num = 6
 
     # policy_obs_term_dim = env.observation_manager.group_obs_term_dim["policy"]
@@ -102,7 +101,7 @@ def _transform_policy_obs_left_right(env: ManagerBasedRLEnv, obs: torch.Tensor) 
     JOINT_VEL_DIM = joint_num
     LAST_ACTIONS_DIM = joint_num
     KEY_BODY_POS_DIM = key_body_num * 3
-    
+
     end_idx = 0
     # ang vel
     for h in range(HISTORY_LEN):
@@ -139,7 +138,7 @@ def _transform_policy_obs_left_right(env: ManagerBasedRLEnv, obs: torch.Tensor) 
         start_idx = end_idx
         end_idx = start_idx + KEY_BODY_POS_DIM
         obs[:, start_idx:end_idx] = _switch_g1_29dof_key_body_pos_left_right(obs[:, start_idx:end_idx])
-    
+
     return obs
 
 
@@ -165,7 +164,6 @@ def _transform_actions_left_right(actions: torch.Tensor) -> torch.Tensor:
     actions = actions.clone()
     actions[:] = _switch_g1_29dof_joints_left_right(actions[:])
     return actions
-
 
 
 """
@@ -201,14 +199,15 @@ Lab joint names:
 28 - right_wrist_yaw_joint
 """
 
+
 def _switch_g1_29dof_joints_left_right(joint_data: torch.Tensor) -> torch.Tensor:
     """Applies a left-right symmetry transformation to the joint data tensor."""
     joint_data_switched = torch.zeros_like(joint_data)
-    
+
     # Indices for left and right joints
     left_indices = [0, 3, 6, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27]
     right_indices = [1, 4, 7, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28]
-    
+
     # Indices for roll and yaw joints that need sign flipping
     roll_indices = [3, 4, 15, 16, 17, 18, 23, 24]
     yaw_indices = [6, 7, 19, 20, 27, 28]
@@ -223,40 +222,41 @@ def _switch_g1_29dof_joints_left_right(joint_data: torch.Tensor) -> torch.Tensor
     # Flip the sign of roll and yaw joints
     joint_data_switched[..., roll_indices] *= -1.0
     joint_data_switched[..., yaw_indices] *= -1.0
-    
+
     # Flip the sign of waist_yaw, waist_roll
     joint_data_switched[..., [2, 5]] *= -1.0
-    
+
     return joint_data_switched
 
 
 def _switch_g1_29dof_key_body_pos_left_right(key_body_pos: torch.Tensor) -> torch.Tensor:
     """Applies a left-right symmetry transformation to the key body positions tensor."""
-    
+
     # We assume that the key body are in pair, for example:
-    # "left_ankle_roll_link", 
+    # "left_ankle_roll_link",
     # "right_ankle_roll_link",
     # "left_wrist_yaw_link",
     # "right_wrist_yaw_link",
     # "left_shoulder_roll_link",
     # "right_shoulder_roll_link",
-    
+
     key_body_pos_switched = key_body_pos.clone()
     num_key_bodies = key_body_pos.shape[-1] // 3
-    
+
     for i in range(num_key_bodies // 2):
         left_idx = i * 2
         right_idx = i * 2 + 1
-        
+
         # Swap left and right key body positions
-        key_body_pos_switched[..., left_idx * 3 : left_idx * 3 + 3] = key_body_pos[..., right_idx * 3 : right_idx * 3 + 3]
-        key_body_pos_switched[..., right_idx * 3 : right_idx * 3 + 3] = key_body_pos[..., left_idx * 3 : left_idx * 3 + 3]
-        
+        key_body_pos_switched[..., left_idx * 3 : left_idx * 3 + 3] = key_body_pos[
+            ..., right_idx * 3 : right_idx * 3 + 3
+        ]
+        key_body_pos_switched[..., right_idx * 3 : right_idx * 3 + 3] = key_body_pos[
+            ..., left_idx * 3 : left_idx * 3 + 3
+        ]
+
         # Flip the y-coordinate to reflect left-right symmetry
         key_body_pos_switched[..., left_idx * 3 + 1] *= -1.0
         key_body_pos_switched[..., right_idx * 3 + 1] *= -1.0
-    
+
     return key_body_pos_switched
-    
-    
-    

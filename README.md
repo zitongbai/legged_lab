@@ -26,7 +26,7 @@
 <a id="overview"></a>
 ## 📖 Overview
 
-This repository is an extension for legged robot reinforcement learning based on Isaac Lab, which allows to develop in an isolated environment, outside of the core Isaac Lab repository. The RL algorithm is based on a [forked RSL-RL library](https://github.com/zitongbai/rsl_rl/tree/feature/amp). 
+This repository is an extension for legged robot reinforcement learning based on Isaac Lab, which allows to develop in an isolated environment, outside of the core Isaac Lab repository. The RL algorithm is based on a [forked RSL-RL library](https://github.com/zitongbai/rsl_rl/tree/feature/amp).
 
 **Key Features:**
 
@@ -44,11 +44,11 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 ## 🔥 News & Updates
 
 - 2026/02/09: Add Docker Compose usage guide (official Isaac Lab image workflow), including host path requirement for local `rsl_rl`.
-- 2025/12/16: Test in Isaac Lab 2.3.1 and RSL-RL 3.2.0. 
+- 2025/12/16: Test in Isaac Lab 2.3.1 and RSL-RL 3.2.0.
 - 2025/12/05: Use git lfs to store large files, including motion data and robot models.
 - 2025/11/23: Add Symmetry data augmentation in AMP training.
-- 2025/11/22: New implementation of AMP. 
-- 2025/11/19: Add DeepMimic for G1. 
+- 2025/11/22: New implementation of AMP.
+- 2025/11/19: Add DeepMimic for G1.
 - 2025/10/14: Update to support rsl_rl v3.1.1. Only walking in flat terrain is supported now.
 - 2025/08/24: Support using more steps observations and motion data in AMP training.
 - 2025/08/22: Compatible with Isaac Lab 2.2.0.
@@ -72,10 +72,10 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
     ```bash
     # Option 1: HTTPS
     git clone https://github.com/zitongbai/legged_lab
-    
+
     # Option 2: SSH
     git clone git@github.com:zitongbai/legged_lab.git
-    
+
     cd legged_lab
     ```
 
@@ -100,7 +100,7 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
     ```bash
     # Clone outside of IsaacLab and legged_lab directories
     git clone -b feature/amp https://github.com/zitongbai/rsl_rl.git
-    
+
     cd rsl_rl
     python -m pip install -e .
     ```
@@ -160,12 +160,12 @@ docker compose -f docker/docker-compose.yaml up -d
 <a id="prepare-motion-data"></a>
 ### 1. Prepare Motion Data
 
-We have already provided some off-the-shelf motion data in the `source/legged_lab/legged_lab/data/MotionData` folder for testing. 
+We have already provided some off-the-shelf motion data in the `source/legged_lab/legged_lab/data/MotionData` folder for testing.
 
 If you want to add more motion data, you can do so by following the steps below.
 
-1. Retarget human motion data to the robot model. We recommend using [GMR](https://github.com/YanjieZe/GMR) for retargeting human motion data. 
-2. Put the retargeted motion data in the `temp/gmr_data` folder. 
+1. Retarget human motion data to the robot model. We recommend using [GMR](https://github.com/YanjieZe/GMR) for retargeting human motion data.
+2. Put the retargeted motion data in the `temp/gmr_data` folder.
 3. Use a helper script to convert the motion data to the required format:
 
     ```bash
@@ -176,7 +176,7 @@ If you want to add more motion data, you can do so by following the steps below.
         --config_file scripts/tools/retarget/config/g1_29dof.yaml \
         --loop clamp
     ```
-4. Move the converted data from `temp/lab_data` to `source/legged_lab/legged_lab/data/MotionData`, and set the `MotionDataCfg` in the config file, e.g., `source/legged_lab/legged_lab/tasks/locomotion/amp/config/g1/g1_amp_env_cfg.py`. 
+4. Move the converted data from `temp/lab_data` to `source/legged_lab/legged_lab/data/MotionData`, and set the `MotionDataCfg` in the config file, e.g., `source/legged_lab/legged_lab/tasks/locomotion/amp/config/g1/g1_amp_env_cfg.py`.
 
 Please refer to the comments in the script for more details about the arguments, and refer to `scripts/tools/retarget/gmr_to_lab.py` for the data format used in this repository.
 
@@ -204,7 +204,7 @@ The `max_iterations` can be adjusted based on your needs. For more details about
 <details>
 <summary>Play</summary>
 
-You can play the trained model in a headless mode and record the video: 
+You can play the trained model in a headless mode and record the video:
 
 ```bash
 # replace the checkpoint path with the path to your trained model
@@ -239,7 +239,7 @@ For more details about the arguments, run `python scripts/rsl_rl/train.py -h`.
 <details>
 <summary>Play</summary>
 
-You can play the trained model in a headless mode and record the video: 
+You can play the trained model in a headless mode and record the video:
 
 ```bash
 # replace the checkpoint path with the path to your trained model

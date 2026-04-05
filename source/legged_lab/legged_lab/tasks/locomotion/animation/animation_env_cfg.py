@@ -1,29 +1,21 @@
-import math
 from dataclasses import MISSING
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
-from isaaclab.envs import ManagerBasedRLEnvCfg
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
-from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
-from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import legged_lab.tasks.locomotion.animation.mdp as mdp
-
+from legged_lab.envs import ManagerBasedAnimationEnvCfg
 from legged_lab.managers import AnimationTermCfg as AnimTerm
 from legged_lab.managers import MotionDataTermCfg as MotionDataTerm
-from legged_lab.envs import ManagerBasedAnimationEnvCfg
-
 
 ##
 # Scene definition
@@ -77,25 +69,23 @@ class AnimSceneCfg(InteractiveSceneCfg):
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
+
     # It is not used, just a placeholder to comply with the structure.
-    joint_pos = mdp.JointPositionActionCfg(asset_name="robot_anim", joint_names=[".*"], scale=0.0, use_default_offset=True)
+    joint_pos = mdp.JointPositionActionCfg(
+        asset_name="robot_anim", joint_names=[".*"], scale=0.0, use_default_offset=True
+    )
 
 
 @configclass
 class ObservationsCfg:
     """Observation specifications for the MDP."""
-    
+
     @configclass
     class AnimCfg(ObsGroup):
         """Observations for policy group."""
 
         # observation terms (order preserved)
-        base_lin_vel = ObsTerm(
-            func=mdp.base_lin_vel,
-            params={
-                "asset_cfg": SceneEntityCfg("robot_anim")
-            }
-        )
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, params={"asset_cfg": SceneEntityCfg("robot_anim")})
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -121,14 +111,17 @@ class TerminationsCfg:
 @configclass
 class MotionDataCfg:
     """Motion data settings for the MDP."""
+
     motion_dataset = MotionDataTerm(
-        motion_data_dir="", 
+        motion_data_dir="",
         motion_data_weights={},
     )
-    
+
+
 @configclass
 class AnimationCfg:
     """Animation settings for the MDP."""
+
     animation = AnimTerm(
         motion_data_term="motion_dataset",
         motion_data_components=[
@@ -136,13 +129,13 @@ class AnimationCfg:
             "root_quat",
             "dof_pos",
             "key_body_pos_b",
-        ], 
-        num_steps_to_use=1, 
+        ],
+        num_steps_to_use=1,
         random_initialize=True,
         random_fetch=False,
         enable_visualization=True,
     )
-    
+
 
 ##
 # Environment configuration
@@ -154,12 +147,12 @@ class AnimationEnvCfg(ManagerBasedAnimationEnvCfg):
     """Configuration for the manager based animation environment."""
 
     scene: AnimSceneCfg = AnimSceneCfg(num_envs=4096, env_spacing=2.5)
-    
+
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
-    
+
     motion_data: MotionDataCfg = MotionDataCfg()
     animation: AnimationCfg = AnimationCfg()
 

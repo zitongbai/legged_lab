@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import torch
+
 from isaaclab.envs import VecEnvStepReturn
 from isaaclab.managers import (
     ActionManager,
@@ -11,9 +12,10 @@ from isaaclab.managers import (
     TerminationManager,
 )
 
-from legged_lab.managers import MotionDataManager, AnimationManager, PreviewObservationManager
-from .manager_based_animation_env import ManagerBasedAnimationEnv
+from legged_lab.managers import AnimationManager, MotionDataManager, PreviewObservationManager
+
 from .manager_based_amp_env_cfg import ManagerBasedAmpEnvCfg
+from .manager_based_animation_env import ManagerBasedAnimationEnv
 
 
 class ManagerBasedAmpEnv(ManagerBasedAnimationEnv):
@@ -201,6 +203,6 @@ class ManagerBasedAmpEnv(ManagerBasedAnimationEnv):
             self.extras["terminal_obs"] = terminal_obs
         else:
             self.extras.pop("terminal_obs", None)
-        
+
         # return observations, rewards, resets and extras
         return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras

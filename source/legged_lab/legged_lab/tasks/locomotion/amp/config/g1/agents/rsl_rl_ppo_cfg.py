@@ -1,11 +1,9 @@
-import os
-
 from isaaclab.utils import configclass
-
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlSymmetryCfg
-from legged_lab.rsl_rl import RslRlPpoAmpAlgorithmCfg, RslRlAmpCfg, RslRlPpoActorCriticConv2dCfg
-from legged_lab import LEGGED_LAB_ROOT_DIR
+
+from legged_lab.rsl_rl import RslRlAmpCfg, RslRlPpoAmpAlgorithmCfg
 from legged_lab.tasks.locomotion.amp.mdp.symmetry import g1
+
 
 @configclass
 class G1RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
@@ -15,10 +13,10 @@ class G1RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
     save_interval = 200
     experiment_name = "g1_amp"
     obs_groups = {
-        "policy": ["policy"], 
-        "critic": ["critic"], 
+        "policy": ["policy"],
+        "critic": ["critic"],
         "discriminator": ["disc"],
-        "discriminator_demonstration": ["disc_demo"]
+        "discriminator_demonstration": ["disc_demo"],
     }
     # policy = RslRlPpoActorCriticRecurrentCfg(
     #     init_noise_std=1.0,
@@ -61,18 +59,14 @@ class G1RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
             disc_learning_rate=1.0e-4,
             disc_max_grad_norm=1.0,
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
-                hidden_dims=[1024, 512],
-                activation="elu",
-                style_reward_scale=5.0,
-                task_style_lerp=0.4
+                hidden_dims=[1024, 512], activation="elu", style_reward_scale=5.0, task_style_lerp=0.4
             ),
-            loss_type="LSGAN"
+            loss_type="LSGAN",
         ),
         symmetry_cfg=RslRlSymmetryCfg(
-            use_data_augmentation=True, data_augmentation_func=g1.compute_symmetric_states,
-            use_mirror_loss=True, mirror_loss_coeff=0.1,
-        )
+            use_data_augmentation=True,
+            data_augmentation_func=g1.compute_symmetric_states,
+            use_mirror_loss=True,
+            mirror_loss_coeff=0.1,
+        ),
     )
-
-
-

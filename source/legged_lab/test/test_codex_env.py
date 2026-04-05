@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CODEX_DIR = REPO_ROOT / ".codex"
 RUN_IN_ENV = CODEX_DIR / "run-in-env.sh"

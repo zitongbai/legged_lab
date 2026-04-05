@@ -1,8 +1,8 @@
 import gymnasium as gym
 
-from . import agents
-
 from legged_lab.envs import ManagerBasedAmpEnv
+
+from . import agents
 
 gym.register(
     id="LeggedLab-Isaac-AMP-G1-v0",

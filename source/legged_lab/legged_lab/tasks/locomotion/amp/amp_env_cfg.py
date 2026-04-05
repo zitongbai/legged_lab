@@ -1,11 +1,8 @@
 import math
 from dataclasses import MISSING
-import torch
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
-from isaaclab.envs import ManagerBasedRLEnvCfg
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -13,21 +10,17 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg, patterns
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-##
-# Pre-defined configs
-##
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
-
 import legged_lab.tasks.locomotion.amp.mdp as mdp
 from legged_lab.envs import ManagerBasedAmpEnvCfg
 from legged_lab.managers import AnimationTermCfg as AnimTerm
 from legged_lab.managers import MotionDataTermCfg as MotionDataTerm
+
 
 @configclass
 class AmpSceneCfg(InteractiveSceneCfg):
@@ -100,8 +93,7 @@ class ActionsCfg:
 
 
 @configclass
-class ObservationsCfg():
-        
+class ObservationsCfg:
     @configclass
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
@@ -117,7 +109,7 @@ class ObservationsCfg():
         # joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         # joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         # actions = ObsTerm(func=mdp.last_action)
-        
+
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm, noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
@@ -138,7 +130,7 @@ class ObservationsCfg():
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
-    
+
     @configclass
     class CriticCfg(ObsGroup):
         """Observations for critic group. (has privilege observations)"""
@@ -160,9 +152,9 @@ class ObservationsCfg():
             self.history_length = 5
             self.enable_corruption = False
             self.concatenate_terms = True
-    
+
     critic: CriticCfg = CriticCfg()
-    
+
     @configclass
     class DiscriminatorCfg(ObsGroup):
         root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
@@ -173,16 +165,16 @@ class ObservationsCfg():
             func=mdp.key_body_pos_b,
             params=MISSING,
         )
-        
+
         def __post_init__(self):
             self.enable_corruption = False
             self.concatenate_terms = True
             self.concatenate_dim = -1
             self.history_length = 10
             self.flatten_history_dim = False
-            
+
     disc: DiscriminatorCfg = DiscriminatorCfg()
-            
+
     @configclass
     class DiscriminatorDemoCfg(ObsGroup):
         ref_root_local_rot_tan_norm = ObsTerm(
@@ -190,44 +182,43 @@ class ObservationsCfg():
             params={
                 "animation": MISSING,
                 "flatten_steps_dim": False,
-            }
+            },
         )
         ref_root_ang_vel_b = ObsTerm(
             func=mdp.ref_root_ang_vel_b,
             params={
                 "animation": MISSING,
                 "flatten_steps_dim": False,
-            }
+            },
         )
         ref_joint_pos = ObsTerm(
             func=mdp.ref_joint_pos,
             params={
                 "animation": MISSING,
                 "flatten_steps_dim": False,
-            }
+            },
         )
         ref_joint_vel = ObsTerm(
             func=mdp.ref_joint_vel,
             params={
                 "animation": MISSING,
                 "flatten_steps_dim": False,
-            }
+            },
         )
         ref_key_body_pos_b = ObsTerm(
             func=mdp.ref_key_body_pos_b,
             params={
                 "animation": MISSING,
                 "flatten_steps_dim": False,
-            }
+            },
         )
-        
+
         def __post_init__(self):
             self.enable_corruption = False
             self.concatenate_terms = True
             self.concatenate_dim = -1
-    
+
     disc_demo: DiscriminatorDemoCfg = DiscriminatorDemoCfg()
-        
 
 
 @configclass
@@ -268,11 +259,7 @@ class EventCfg:
         },
     )
 
-    reset_from_ref = EventTerm(
-        func=mdp.reset_from_ref, 
-        mode="reset",
-        params=MISSING
-    )
+    reset_from_ref = EventTerm(func=mdp.reset_from_ref, mode="reset", params=MISSING)
 
     # interval
     push_robot = EventTerm(
@@ -281,6 +268,7 @@ class EventCfg:
         interval_range_s=(5.0, 5.0),
         params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
     )
+
 
 @configclass
 class RewardsCfg:
@@ -329,7 +317,7 @@ class TerminationsCfg:
     )
     base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
     bad_orientation = DoneTerm(
-        func=mdp.bad_orientation, 
+        func=mdp.bad_orientation,
         params={
             "limit_angle": math.radians(60.0),
         },
@@ -339,19 +327,24 @@ class TerminationsCfg:
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
+
     pass
+
 
 @configclass
 class MotionDataCfg:
     """Motion data settings for the MDP."""
+
     motion_dataset = MotionDataTerm(
-        motion_data_dir="", 
+        motion_data_dir="",
         motion_data_weights={},
     )
-    
+
+
 @configclass
 class AnimationCfg:
     """Animation settings for the MDP."""
+
     animation = AnimTerm(
         motion_data_term="motion_dataset",
         motion_data_components=[
@@ -362,8 +355,8 @@ class AnimationCfg:
             "dof_pos",
             "dof_vel",
             "key_body_pos_b",
-        ], 
-        num_steps_to_use=10, 
+        ],
+        num_steps_to_use=10,
         random_initialize=True,
         random_fetch=True,
         enable_visualization=False,
@@ -409,4 +402,3 @@ class LocomotionAmpEnvCfg(ManagerBasedAmpEnvCfg):
         # we tick all the sensors based on the smallest update period (physics update period)
         if self.scene.contact_forces is not None:
             self.scene.contact_forces.update_period = self.sim.dt
-

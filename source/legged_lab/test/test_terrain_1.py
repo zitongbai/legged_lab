@@ -69,19 +69,15 @@ import random
 import torch
 
 import isaaclab.sim as sim_utils
+import isaaclab.terrains as terrain_gen
 from isaaclab.assets import AssetBase
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.terrains import FlatPatchSamplingCfg, TerrainImporter, TerrainImporterCfg
+from isaaclab.terrains.terrain_generator_cfg import TerrainGeneratorCfg
 
 ##
 # Pre-defined configs
 ##
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort:skip
-
-import isaaclab.terrains as terrain_gen
-from isaaclab.terrains.terrain_generator_cfg import TerrainGeneratorCfg
-
-
 MY_TERRAINS_CFG = TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
@@ -101,7 +97,7 @@ MY_TERRAINS_CFG = TerrainGeneratorCfg(
         #     holes=False,
         # ),
         # "mesh_rails": terrain_gen.MeshRailsTerrainCfg(
-        #     proportion=0.0, 
+        #     proportion=0.0,
         #     rail_thickness_range = (0.05, 0.5),
         #     rail_height_range= (0.05, 0.5),
         #     platform_width=2.0,
@@ -128,7 +124,7 @@ MY_TERRAINS_CFG = TerrainGeneratorCfg(
             ring_height_range=(0.05, 1.5),
             ring_thickness=0.1,
             platform_width=2.0,
-        ),  
+        ),
         "mesh_star": terrain_gen.MeshStarTerrainCfg(
             proportion=0.1,
             num_bars=5,
@@ -139,16 +135,16 @@ MY_TERRAINS_CFG = TerrainGeneratorCfg(
         "mesh_repeated_pyramid": terrain_gen.MeshRepeatedPyramidsTerrainCfg(
             proportion=0.1,
             object_params_start=terrain_gen.MeshRepeatedPyramidsTerrainCfg.ObjectCfg(
-                num_objects=5, 
-                height=0.5, 
-                radius=0.1, 
+                num_objects=5,
+                height=0.5,
+                radius=0.1,
                 max_yx_angle=30,
                 degrees=True,
             ),
             object_params_end=terrain_gen.MeshRepeatedPyramidsTerrainCfg.ObjectCfg(
-                num_objects=10, 
-                height=1.0, 
-                radius=0.5, 
+                num_objects=10,
+                height=1.0,
+                radius=0.5,
                 max_yx_angle=30,
                 degrees=True,
             ),
@@ -156,16 +152,16 @@ MY_TERRAINS_CFG = TerrainGeneratorCfg(
         "mesh_repeated_cylinder": terrain_gen.MeshRepeatedCylindersTerrainCfg(
             proportion=0.1,
             object_params_start=terrain_gen.MeshRepeatedCylindersTerrainCfg.ObjectCfg(
-                num_objects=5, 
-                height=0.5, 
-                radius=0.1, 
+                num_objects=5,
+                height=0.5,
+                radius=0.1,
                 max_yx_angle=10,
                 degrees=True,
             ),
             object_params_end=terrain_gen.MeshRepeatedCylindersTerrainCfg.ObjectCfg(
-                num_objects=10, 
-                height=1.0, 
-                radius=0.5, 
+                num_objects=10,
+                height=1.0,
+                radius=0.5,
                 max_yx_angle=10,
                 degrees=True,
             ),
@@ -193,8 +189,9 @@ MY_TERRAINS_CFG = TerrainGeneratorCfg(
             holes_depth=-10.0,
             slope_threshold=None,
         ),
-    }
+    },
 )
+
 
 def design_scene() -> tuple[dict, torch.Tensor]:
     """Designs the scene."""
