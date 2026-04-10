@@ -26,14 +26,10 @@ class G1AnimEnvCfg(AnimationEnvCfg):
         )
 
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "walk"
+            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "deepmimic"
         )
         self.motion_data.motion_dataset.motion_data_weights = {
-            "B14_-__Walk_turn_right_45_t2_stageii": 1.0,
-            "B15_-__Walk_turn_around_stageii": 1.0,
-            "B22_-__side_step_left_stageii": 1.0,
-            "B23_-__side_step_right_stageii": 1.0,
-            "B10_-__Walk_turn_left_45_stageii": 1.0,
+            "C4_-_run_to_walk_a_stageii": 1.0,
         }
         # self.motion_data.motion_dataset.key_link_names = [
         #     "left_ankle_roll_link",
