@@ -125,6 +125,7 @@ If your `rsl_rl` is somewhere else, update `RSL_RL_PATH` in `docker/.env.base`.
 #### Start container
 
 ```bash
+# xhost +
 docker compose -f docker/docker-compose.yaml up -d
 ```
 
