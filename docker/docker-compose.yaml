@@ -2,6 +2,7 @@ x-default-environment: &default-environment
   OMNI_KIT_ALLOW_ROOT: "1"
   ACCEPT_EULA: "Y"
   PRIVACY_CONSENT: "Y"
+  DISPLAY: ${DISPLAY:-}
   HTTP_PROXY: ${HTTP_PROXY:-}
   HTTPS_PROXY: ${HTTPS_PROXY:-}
   NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
@@ -22,8 +23,14 @@ services:
         source: ../
         target: /workspace/legged_lab
       - type: bind
+        source: ./vscode/settings.json
+        target: /workspace/legged_lab/.vscode/settings.json
+      - type: bind
         source: ${RSL_RL_PATH:-../../rsl_rl}
         target: /workspace/rsl_rl
+      - type: bind
+        source: ${HOME}/.Xauthority
+        target: /root/.Xauthority
       - type: bind
         source: ${DOCKER_CACHE_ROOT:-./.cache}/kit
         target: /isaac-sim/kit/cache
@@ -53,6 +60,7 @@ services:
     command:
       - |
         set -euo pipefail
+        bash /workspace/legged_lab/docker/codex/install.sh
         /workspace/isaaclab/_isaac_sim/python.sh -m pip install -e /workspace/rsl_rl --no-deps
         /workspace/isaaclab/_isaac_sim/python.sh -m pip install -e /workspace/legged_lab/source/legged_lab
         exec bash
