@@ -1,0 +1,4 @@
+interface:
+  display_name: "Legged Lab Runner"
+  short_description: "Run Legged Lab Python commands"
+  default_prompt: "Use $legged-lab-runner to run this repository's Python command in the configured development environment."

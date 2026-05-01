@@ -14,18 +14,13 @@ Follow Python 3.10+ style with 4-space indentation and a 120-character line limi
 - Use English for all commit messages when committing.
 
 ## Codex Environment Bootstrap
-This repository depends on a user-local Isaac Lab installation inside a conda environment.
+This repository supports both conda and Docker development environments.
 Never run Python-related commands directly in this repository.
 
-- Always run `python`, `pytest`, `pip`, `pre-commit`, and repository Python entrypoints through `bash .codex/run-in-env.sh ...`
-- Before executing commands, `.codex/run-in-env.sh` must load `.codex/env.local.sh`
-- If `.codex/env.local.sh` is missing, stop and ask the user to create it from `.codex/env.local.sh.example`
-- If `CODEX_CONDA_ENV` is missing, invalid, or cannot be activated, stop and report the exact issue
-- If `ISAACLAB_PATH` is missing or invalid, stop and report the exact issue
+- Always run `python`, `pytest`, `pip`, `pre-commit`, and repository Python entrypoints through the `legged-lab-runner` skill in this repository.
 - Never guess or auto-fill machine-specific values for the user
-- Strictly forbid using `git worktree` for this repository
-- Do not create, use, or suggest worktree-based workflows here
-- Reason: this repository is developed via `pip install -e` inside a conda environment, so changing the checkout path breaks or conflicts with the editable install target
+- If running with conda, strictly forbid using `git worktree`
+
 
 ## Configuration & Assets
 Pull large assets with `git lfs pull` after cloning. Avoid committing generated files from `logs/`, `outputs/`, or `temp/` unless the change explicitly updates tracked sample data or documentation.
