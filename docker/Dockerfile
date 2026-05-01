@@ -13,6 +13,12 @@ ARG no_proxy
 SHELL ["/bin/bash", "-lc"]
 
 RUN set -euo pipefail; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends git-lfs; \
+    git lfs install --system; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN set -euo pipefail; \
     codex_installer=/tmp/codex-install.sh; \
     codex_install_url=https://github.com/openai/codex/releases/latest/download/install.sh; \
     if command -v curl >/dev/null 2>&1; then \
