@@ -95,7 +95,7 @@ class G1AmpRewards:
         },
     )
 
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-200.0)
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-50.0)
 
 
 @configclass

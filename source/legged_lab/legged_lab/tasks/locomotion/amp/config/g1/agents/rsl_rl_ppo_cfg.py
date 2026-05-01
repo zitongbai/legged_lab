@@ -59,7 +59,7 @@ class G1RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
             disc_learning_rate=1.0e-4,
             disc_max_grad_norm=1.0,
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
-                hidden_dims=[1024, 512], activation="elu", style_reward_scale=5.0, task_style_lerp=0.4
+                hidden_dims=[1024, 512], activation="elu", style_reward_scale=5.0, task_style_lerp=0.3
             ),
             loss_type="LSGAN",
         ),
