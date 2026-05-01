@@ -116,11 +116,11 @@ class ObservationsCfg:
         joint_pos = ObsTerm(func=mdp.joint_pos, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel = ObsTerm(func=mdp.joint_vel, noise=Unoise(n_min=-1.5, n_max=1.5))
         actions = ObsTerm(func=mdp.last_action)
-        key_body_pos_b = ObsTerm(
-            func=mdp.key_body_pos_b,
-            params=MISSING,
-            noise=Unoise(n_min=-0.08, n_max=0.08),
-        )
+        # key_body_pos_b = ObsTerm(
+        #     func=mdp.key_body_pos_b,
+        #     params=MISSING,
+        #     noise=Unoise(n_min=-0.08, n_max=0.08),
+        # )
         # root_height = ObsTerm(func=mdp.base_pos_z)
 
         def __post_init__(self):
@@ -157,14 +157,14 @@ class ObservationsCfg:
 
     @configclass
     class DiscriminatorCfg(ObsGroup):
-        root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
+        # root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
         joint_pos = ObsTerm(func=mdp.joint_pos)
         joint_vel = ObsTerm(func=mdp.joint_vel)
-        key_body_pos_b = ObsTerm(
-            func=mdp.key_body_pos_b,
-            params=MISSING,
-        )
+        # key_body_pos_b = ObsTerm(
+        #     func=mdp.key_body_pos_b,
+        #     params=MISSING,
+        # )
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -177,13 +177,13 @@ class ObservationsCfg:
 
     @configclass
     class DiscriminatorDemoCfg(ObsGroup):
-        ref_root_local_rot_tan_norm = ObsTerm(
-            func=mdp.ref_root_local_rot_tan_norm,
-            params={
-                "animation": MISSING,
-                "flatten_steps_dim": False,
-            },
-        )
+        # ref_root_local_rot_tan_norm = ObsTerm(
+        #     func=mdp.ref_root_local_rot_tan_norm,
+        #     params={
+        #         "animation": MISSING,
+        #         "flatten_steps_dim": False,
+        #     },
+        # )
         ref_root_ang_vel_b = ObsTerm(
             func=mdp.ref_root_ang_vel_b,
             params={
@@ -205,13 +205,13 @@ class ObservationsCfg:
                 "flatten_steps_dim": False,
             },
         )
-        ref_key_body_pos_b = ObsTerm(
-            func=mdp.ref_key_body_pos_b,
-            params={
-                "animation": MISSING,
-                "flatten_steps_dim": False,
-            },
-        )
+        # ref_key_body_pos_b = ObsTerm(
+        #     func=mdp.ref_key_body_pos_b,
+        #     params={
+        #         "animation": MISSING,
+        #         "flatten_steps_dim": False,
+        #     },
+        # )
 
         def __post_init__(self):
             self.enable_corruption = False

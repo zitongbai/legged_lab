@@ -96,7 +96,6 @@ def test_nested_iterable_dict():
     @hydra_task_config_test("LeggedLab-Isaac-AMP-G1-v0", "rsl_rl_cfg_entry_point")
     def main(env_cfg, agent_cfg):
         # env
-        assert env_cfg.observations.policy.key_body_pos_b.params["asset_cfg"].preserve_order is True
         assert env_cfg.observations.critic.key_body_pos_b.params["asset_cfg"].preserve_order is True
         # agent
         assert agent_cfg.obs_groups["discriminator"] == ["disc"]

@@ -160,9 +160,9 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
 
         # policy observations
 
-        self.observations.policy.key_body_pos_b.params = {
-            "asset_cfg": SceneEntityCfg(name="robot", body_names=KEY_BODY_NAMES, preserve_order=True)
-        }
+        # self.observations.policy.key_body_pos_b.params = {
+        #     "asset_cfg": SceneEntityCfg(name="robot", body_names=KEY_BODY_NAMES, preserve_order=True)
+        # }
 
         # critic observations
 
@@ -172,18 +172,18 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
 
         # discriminator observations
 
-        self.observations.disc.key_body_pos_b.params = {
-            "asset_cfg": SceneEntityCfg(name="robot", body_names=KEY_BODY_NAMES, preserve_order=True)
-        }
+        # self.observations.disc.key_body_pos_b.params = {
+        #     "asset_cfg": SceneEntityCfg(name="robot", body_names=KEY_BODY_NAMES, preserve_order=True)
+        # }
         self.observations.disc.history_length = AMP_NUM_STEPS
 
         # discriminator demonstration observations
 
-        self.observations.disc_demo.ref_root_local_rot_tan_norm.params["animation"] = ANIMATION_TERM_NAME
+        # self.observations.disc_demo.ref_root_local_rot_tan_norm.params["animation"] = ANIMATION_TERM_NAME
         self.observations.disc_demo.ref_root_ang_vel_b.params["animation"] = ANIMATION_TERM_NAME
         self.observations.disc_demo.ref_joint_pos.params["animation"] = ANIMATION_TERM_NAME
         self.observations.disc_demo.ref_joint_vel.params["animation"] = ANIMATION_TERM_NAME
-        self.observations.disc_demo.ref_key_body_pos_b.params["animation"] = ANIMATION_TERM_NAME
+        # self.observations.disc_demo.ref_key_body_pos_b.params["animation"] = ANIMATION_TERM_NAME
 
         # ------------------------------------------------------
         # Events
