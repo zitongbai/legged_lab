@@ -16,7 +16,7 @@
 - [Installation](#installation)
   - [Prerequisites](#prerequisites)
   - [Setup Steps](#setup-steps)
-  - [Docker Usage (Isaac Lab Image)](#docker-usage)
+  - [Docker Usage (Dockerfile + Bash Scripts)](#docker-usage)
 - [Usage](#usage)
   - [Prepare Motion Data](#prepare-motion-data)
   - [Training & Play](#training-and-play)
@@ -43,7 +43,7 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 <a id="news-updates"></a>
 ## 🔥 News & Updates
 
-- 2026/02/09: Add Docker Compose usage guide (official Isaac Lab image workflow), including host path requirement for local `rsl_rl`.
+- 2026/02/09: Add Dockerfile + bash script workflow, including host path requirement for local `rsl_rl`.
 - 2025/12/16: Test in Isaac Lab 2.3.1 and RSL-RL 3.2.0.
 - 2025/12/05: Use git lfs to store large files, including motion data and robot models.
 - 2025/11/23: Add Symmetry data augmentation in AMP training.
@@ -106,13 +106,13 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
     ```
 
 <a id="docker-usage"></a>
-### Docker Usage (Isaac Lab Image)
+### Docker Usage (Dockerfile + Bash Scripts)
 
-If you use the provided Docker Compose workflow, the container will mount local source code and install packages automatically at startup.
+If you use the provided Docker workflow, the container will mount local source code and install packages automatically at startup.
 
 #### Host directory requirement for `rsl_rl`
 
-By default, `docker/docker-compose.yaml` expects `rsl_rl` to be placed next to `legged_lab`:
+By default, `docker/.env.base` expects `rsl_rl` to be placed next to `legged_lab`:
 
 ```text
 .../lab_dev/
@@ -122,21 +122,30 @@ By default, `docker/docker-compose.yaml` expects `rsl_rl` to be placed next to `
 
 If your `rsl_rl` is somewhere else, update `RSL_RL_PATH` in `docker/.env.base`.
 
+By default, Isaac Sim caches, logs, data, and documents use the official Docker directory layout under `~/docker/isaac-sim`.
+
+#### Build image
+
+```bash
+bash docker/build.sh
+```
+
 #### Start container
 
 ```bash
 # xhost +
-docker compose -f docker/docker-compose.yaml up -d
+bash docker/run.sh
 ```
 
 At startup, the container will:
+- overwrite `.vscode/settings.json` with the container's built-in VS Code settings
 - install mounted `rsl_rl` in editable mode (`/workspace/rsl_rl`)
 - install mounted `legged_lab` in editable mode (`/workspace/legged_lab/source/legged_lab`)
 
 #### Enter container
 
 ```bash
-docker compose -f docker/docker-compose.yaml exec legged-lab bash
+bash docker/enter.sh
 ```
 
 Default working directory is `/workspace/legged_lab`.
@@ -144,15 +153,15 @@ Default working directory is `/workspace/legged_lab`.
 #### Stop / remove container
 
 ```bash
-docker compose -f docker/docker-compose.yaml stop
-docker compose -f docker/docker-compose.yaml down
+bash docker/stop.sh
 ```
 
-#### Recreate container after compose changes
+#### Rebuild image after Dockerfile changes
 
 ```bash
-docker compose -f docker/docker-compose.yaml down
-docker compose -f docker/docker-compose.yaml up -d
+bash docker/stop.sh
+bash docker/build.sh
+bash docker/run.sh
 ```
 
 <a id="usage"></a>

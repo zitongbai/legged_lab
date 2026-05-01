@@ -14,6 +14,8 @@ docs/
 # ignore docker
 docker/cluster/exports/
 docker/.container.cfg
+docker/.cache/
+docker/artifacts/
 # ignore recordings
 recordings/
 # ignore __pycache__
