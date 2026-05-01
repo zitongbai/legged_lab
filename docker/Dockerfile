@@ -26,6 +26,8 @@ RUN set -euo pipefail; \
     bash "${codex_installer}"; \
     rm -f "${codex_installer}"
 
+RUN /workspace/isaaclab/_isaac_sim/python.sh -m pip install pre-commit
+
 RUN mkdir -p /opt/legged_lab/vscode && \
     printf '%s\n' \
         '{' \

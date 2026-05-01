@@ -84,6 +84,7 @@ fi
 
 docker run "${DOCKER_ARGS[@]}" "${LEGGED_LAB_IMAGE}" -lc '
     set -euo pipefail
+    git config --global --add safe.directory /workspace/legged_lab
     mkdir -p /workspace/legged_lab/.vscode
     cp /opt/legged_lab/vscode/settings.json /workspace/legged_lab/.vscode/settings.json
     /workspace/isaaclab/_isaac_sim/python.sh -m pip install -e /workspace/rsl_rl --no-deps
