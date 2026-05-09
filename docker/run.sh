@@ -33,6 +33,14 @@ fi
 
 RSL_RL_HOST_PATH="$(cd "${RSL_RL_HOST_PATH}" && pwd -P)"
 
+DATASETS_HOST_PATH="$(resolve_path "${DATASETS_PATH:-../../datasets}" "${SCRIPT_DIR}")"
+
+if [[ ! -d "${DATASETS_HOST_PATH}" ]]; then
+    echo "WARNING: DATASETS_PATH does not point to an existing directory: ${DATASETS_HOST_PATH} — skipping datasets mount." >&2
+else
+    DATASETS_HOST_PATH="$(cd "${DATASETS_HOST_PATH}" && pwd -P)"
+fi
+
 mkdir -p \
     "${CACHE_HOST_ROOT}/cache/kit" \
     "${CACHE_HOST_ROOT}/cache/ov" \
@@ -82,9 +90,13 @@ if [[ -f "${HOME}/.Xauthority" ]]; then
     DOCKER_ARGS+=(--volume "${HOME}/.Xauthority:/root/.Xauthority")
 fi
 
+if [[ -d "${DATASETS_HOST_PATH}" ]]; then
+    DOCKER_ARGS+=(--volume "${DATASETS_HOST_PATH}:/workspace/datasets:rw")
+fi
+
 docker run "${DOCKER_ARGS[@]}" "${LEGGED_LAB_IMAGE}" -lc '
     set -euo pipefail
-    git config --global --add safe.directory /workspace/legged_lab
+    git config --global safe.directory /workspace/legged_lab || true
     mkdir -p /workspace/legged_lab/.vscode
     cp /opt/legged_lab/vscode/settings.json /workspace/legged_lab/.vscode/settings.json
     /workspace/isaaclab/_isaac_sim/python.sh -m pip install -e /workspace/rsl_rl --no-deps

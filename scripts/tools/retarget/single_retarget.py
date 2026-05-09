@@ -1,127 +1,56 @@
 """
-This module provides functionality to convert motion data from GMR format to Legged Lab format.
-
-Ref:
-    - https://github.com/xbpeng/MimicKit/blob/main/tools/gmr_to_mimickit/gmr_to_mimickit.py
-    - https://github.com/HybridRobotics/whole_body_tracking/blob/main/scripts/csv_to_npz.py
+Convert a single GMR motion file to Legged Lab format (.npz).
 
 What does this script do?
-    - Reorder the dof data from GMR (in mujoco order) to Legged Lab (in Isaac Lab order).
-    - Add loop mode to the motion data.
+    - Reorders DOF data from GMR (MuJoCo order) to Legged Lab (Isaac Lab order).
+    - Runs Isaac Lab in render-only mode to collect full-body kinematic data.
+    - Computes velocities via central finite differences.
+    - Saves result as .npz with all body states.
 
 Usage:
-    Command line:
-        python scripts/tools/retarget/gmr_to_lab.py \
-            --robot g1 \
-            --input_file <path_to_gmr_file> \
-            --output_file <path_to_output_file> \
-            --config_file <path_to_config_file> \
-            [--loop {wrap,clamp}] \
-            [--frame_range START END]
+    python scripts/tools/retarget/single_retarget.py \
+        --robot g1 \
+        --input_file <path_to_gmr_file.pkl> \
+        --output_file <path_to_output_file.npz> \
+        --config_file scripts/tools/retarget/config/g1_29dof.yaml \
+        [--frame_range START END] \
+        [--headless] \
+        [--device {cpu,cuda:0}]
 
-    Required arguments:
-        --robot: Robot name to be used (default: g1).
-        --input_file: Path to the input GMR motion file (pickle format).
-        --output_file: Path to save the converted motion data (pickle format).
-        --config_file: Path to the configuration file (yaml format).
-                      Should contain: gmr_dof_names, lab_dof_names, lab_key_body_names
+GMR Format (input):
+    pickle file with keys: fps, root_pos, root_rot (xyzw), dof_pos
 
-    Optional arguments:
-        --loop {wrap,clamp}     Loop mode for the motion (default: clamp).
-        --frame_range START END Frame range to extract.
-                               If not provided, all frames will be processed.
-                               Example: --frame_range 10 100
-
-    AppLauncher arguments:
-        --headless              Run without GUI.
-        --device {cpu,cuda:0}   Device to use for simulation (default: cuda:0).
-
-    Example:
-        # Convert full motion with GUI
-        python scripts/tools/retarget/gmr_to_lab.py \
-            --robot g1 \
-            --input_file data/gmr/walk.pkl \
-            --output_file data/lab/walk.pkl \
-            --config_file scripts/tools/retarget/g1_29dof.yaml
-
-        # Convert specific frame range without GUI
-        python scripts/tools/retarget/gmr_to_lab.py \
-            --robot g1 \
-            --input_file data/gmr/walk.pkl \
-            --output_file data/lab/walk_clip.pkl \
-            --config_file scripts/tools/retarget/g1_29dof.yaml \
-            --frame_range 10 100 \
-            --loop wrap \
-            --headless
-
-GMR Format:
-    The input GMR format should be a pickle file containing a dictionary with keys:
-    - 'fps': Frame rate (int)
-    - 'root_pos': Root position array, shape (num_frames, 3)
-    - 'root_rot': Root rotation quaternions, shape (num_frames, 4), format (x, y, z, w)
-    - 'dof_pos': Degrees of freedom positions, shape (num_frames, num_dofs)
-    - 'local_body_pos': Currently unused (can be None)
-    - 'link_body_list': Currently unused (can be None)
-
+Legged Lab Format (output .npz):
+    fps, root_pos, root_rot (wxyz), dof_pos, body_names,
+    body_pos_w, body_quat_w, body_lin_vel_w, body_ang_vel_w
 """
 
 import argparse
 
 from isaaclab.app import AppLauncher
 
-# add argparse arguments
-parser = argparse.ArgumentParser(description="Visualization of retargeted data.")
-parser.add_argument(
-    "--robot",
-    type=str,
-    default="g1",
-    help="The robot name to be used.",
-)
-parser.add_argument(
-    "--input_file",
-    type=str,
-    required=True,
-    help="Path to the input GMR motion file (pickle format).",
-)
-parser.add_argument(
-    "--output_file",
-    type=str,
-    required=True,
-    help="Path to save the converted motion data (pickle format).",
-)
-parser.add_argument(
-    "--config_file",
-    type=str,
-    required=True,
-    help="Path to the configuration file (yaml format).",
-)
-parser.add_argument(
-    "--loop",
-    type=str,
-    choices=["wrap", "clamp"],
-    default="clamp",
-    help="Loop mode for the motion (default: clamp).",
-)
+parser = argparse.ArgumentParser(description="Convert a single GMR pkl to Legged Lab npz.")
+parser.add_argument("--robot", type=str, default="g1", help="Robot name (default: g1).")
+parser.add_argument("--input_file", type=str, required=True, help="Path to input GMR pickle file.")
+parser.add_argument("--output_file", type=str, required=True, help="Path to output .npz file.")
+parser.add_argument("--config_file", type=str, required=True, help="Path to YAML config (gmr_dof_names, lab_dof_names).")
 parser.add_argument(
     "--frame_range",
     nargs=2,
     type=int,
     metavar=("START", "END"),
-    help="frame range: START END (both inclusive). If not provided, all frames will be loaded.",
+    help="Frame range: START END (both inclusive). If not provided, all frames are used.",
 )
 
-# append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
 args_cli = parser.parse_args()
 
-# launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import pickle
+import numpy as np
 import sys
 import yaml
 from pathlib import Path
@@ -129,24 +58,18 @@ from pathlib import Path
 import isaaclab.sim as sim_utils
 from isaaclab.scene import InteractiveScene
 
-##
-# Pre-defined configs
-##
 if args_cli.robot == "g1":
     from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 
-# Import functions and classes from gmr_to_lab.py
-# Add the script directory to path to allow imports
 script_dir = Path(__file__).parent
 sys.path.insert(0, str(script_dir))
 
 try:
-    from gmr_to_lab import LoopMode, ReplayMotionsSceneCfg, extract_gmr_data, run_simulator
+    from gmr_to_lab import ReplayMotionsSceneCfg, extract_gmr_data, run_simulator
 except ImportError as e:
     print(f"Error importing from gmr_to_lab.py: {e}")
-    print("Make sure gmr_to_lab.py is in the same directory as this script.")
     raise
 
 
@@ -156,15 +79,11 @@ if __name__ == "__main__":
 
     gmr_dof_names = config["gmr_dof_names"]
     lab_dof_names = config["lab_dof_names"]
-    lab_key_body_names = config["lab_key_body_names"]
-
-    loop_mode = LoopMode.CLAMP if args_cli.loop == "clamp" else LoopMode.WRAP
 
     motion_data_dict = extract_gmr_data(
         gmr_file_path=args_cli.input_file,
         gmr_dof_names=gmr_dof_names,
         lab_dof_names=lab_dof_names,
-        loop_mode=loop_mode,
         start_frame=args_cli.frame_range[0] if args_cli.frame_range else 0,
         end_frame=args_cli.frame_range[1] if args_cli.frame_range else -1,
     )
@@ -178,29 +97,23 @@ if __name__ == "__main__":
     )
     scene = InteractiveScene(scene_cfg)
 
-    # Set main camera
     sim.set_camera_view([2.0, 0.0, 2.5], [-0.5, 0.0, 0.5])
-
     sim.reset()
     print("Simulation starting ...")
 
-    motion_data_dicts = [motion_data_dict]
-    motion_data_dicts = run_simulator(simulation_app, sim, scene, motion_data_dicts, lab_key_body_names)
-
+    motion_data_dicts = run_simulator(simulation_app, sim, scene, [motion_data_dict])
     motion_data_dict = motion_data_dicts[0]
 
     print("\n" + "=" * 60)
     print("💾 SAVING CONVERTED DATA")
     print("=" * 60)
     print(f"📁 Output File: {args_cli.output_file}")
-    print(
-        f"🧮 Number of Frames: {args_cli.frame_range[1] - args_cli.frame_range[0] if args_cli.frame_range else 'All'}"
-    )
-    print(f"🔁 Loop Mode: {loop_mode.name}")
+    num_frames = args_cli.frame_range[1] - args_cli.frame_range[0] if args_cli.frame_range else "All"
+    print(f"🧮 Number of Frames: {num_frames}")
+    print(f"🦴 Body count: {len(motion_data_dict['body_names'])}")
     print("=" * 60 + "\n")
 
-    with open(args_cli.output_file, "wb") as f:
-        pickle.dump(motion_data_dict, f)
+    np.savez_compressed(args_cli.output_file, **motion_data_dict)
     print("✅ Data saved successfully.")
     print("=" * 60 + "\n")
 
