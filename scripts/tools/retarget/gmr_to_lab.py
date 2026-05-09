@@ -51,9 +51,9 @@ def extract_gmr_data(
         gmr_data = pickle.load(f)
 
     fps = gmr_data["fps"]
-    root_pos = gmr_data["root_pos"]        # (num_frames, 3)
-    root_rot_quat = gmr_data["root_rot"]   # (num_frames, 4), xyzw
-    dof_pos = gmr_data["dof_pos"]          # (num_frames, num_dofs)
+    root_pos = gmr_data["root_pos"]  # (num_frames, 3)
+    root_rot_quat = gmr_data["root_rot"]  # (num_frames, 4), xyzw
+    dof_pos = gmr_data["dof_pos"]  # (num_frames, num_dofs)
 
     print("\n" + "=" * 60)
     print("📥 LOADED GMR DATA")
@@ -120,9 +120,7 @@ def _compute_body_velocities(
     # Angular velocity: process each body independently
     body_ang_vel_w = torch.zeros(T, B, 3, device=body_pos_w.device)
     for b in range(B):
-        body_ang_vel_w[:, b, :] = ang_vel_from_quat_diff(
-            body_quat_w[:, b, :], dt, in_frame="world", method="central"
-        )
+        body_ang_vel_w[:, b, :] = ang_vel_from_quat_diff(body_quat_w[:, b, :], dt, in_frame="world", method="central")
 
     return body_lin_vel_w, body_ang_vel_w
 
@@ -164,12 +162,8 @@ def run_simulator(
     max_num_frames = max(num_frames_list)
 
     # Pre-allocate body state collection buffers
-    body_pos_w_list = [
-        torch.zeros((n, num_bodies, 3), device=scene.device) for n in num_frames_list
-    ]
-    body_quat_w_list = [
-        torch.zeros((n, num_bodies, 4), device=scene.device) for n in num_frames_list
-    ]
+    body_pos_w_list = [torch.zeros((n, num_bodies, 3), device=scene.device) for n in num_frames_list]
+    body_quat_w_list = [torch.zeros((n, num_bodies, 4), device=scene.device) for n in num_frames_list]
 
     count = 0
     dt = sim.cfg.dt
@@ -201,9 +195,7 @@ def run_simulator(
         for motion_idx in range(num_motions):
             if count < num_frames_list[motion_idx]:
                 origin = scene.env_origins[motion_idx, :3]
-                body_pos_w_list[motion_idx][count] = (
-                    robot.data.body_pos_w[motion_idx] - origin.unsqueeze(0)
-                )
+                body_pos_w_list[motion_idx][count] = robot.data.body_pos_w[motion_idx] - origin.unsqueeze(0)
                 body_quat_w_list[motion_idx][count] = robot.data.body_quat_w[motion_idx]
 
         count += 1
@@ -217,7 +209,7 @@ def run_simulator(
         fps = motion_data_dict["fps"]
         motion_dt = 1.0 / fps
 
-        body_pos_w = body_pos_w_list[motion_idx]    # (T, B, 3)
+        body_pos_w = body_pos_w_list[motion_idx]  # (T, B, 3)
         body_quat_w = body_quat_w_list[motion_idx]  # (T, B, 4)
 
         body_lin_vel_w, body_ang_vel_w = _compute_body_velocities(body_pos_w, body_quat_w, motion_dt)

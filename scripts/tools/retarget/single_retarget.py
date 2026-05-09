@@ -33,7 +33,9 @@ parser = argparse.ArgumentParser(description="Convert a single GMR pkl to Legged
 parser.add_argument("--robot", type=str, default="g1", help="Robot name (default: g1).")
 parser.add_argument("--input_file", type=str, required=True, help="Path to input GMR pickle file.")
 parser.add_argument("--output_file", type=str, required=True, help="Path to output .npz file.")
-parser.add_argument("--config_file", type=str, required=True, help="Path to YAML config (gmr_dof_names, lab_dof_names).")
+parser.add_argument(
+    "--config_file", type=str, required=True, help="Path to YAML config (gmr_dof_names, lab_dof_names)."
+)
 parser.add_argument(
     "--frame_range",
     nargs=2,

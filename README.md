@@ -122,6 +122,17 @@ By default, `docker/.env.base` expects `rsl_rl` to be placed next to `legged_lab
 
 If your `rsl_rl` is somewhere else, update `RSL_RL_PATH` in `docker/.env.base`.
 
+#### Host directory requirement for datasets
+
+Before starting the container, set `LEGGED_LAB_DATA_DIR` to an existing host datasets directory:
+
+```bash
+export LEGGED_LAB_DATA_DIR=/path/to/datasets
+```
+
+`docker/run.sh` mounts that directory to `/workspace/datasets` and exports
+`LEGGED_LAB_DATA_DIR=/workspace/datasets` inside the container.
+
 By default, Isaac Sim caches, logs, data, and documents use the official Docker directory layout under `~/docker/isaac-sim`.
 
 #### Build image
@@ -138,6 +149,7 @@ bash docker/run.sh
 ```
 
 At startup, the container will:
+- mount submodule Git metadata when the repository is checked out as a Git submodule
 - overwrite `.vscode/settings.json` with the container's built-in VS Code settings
 - install mounted `rsl_rl` in editable mode (`/workspace/rsl_rl`)
 - install mounted `legged_lab` in editable mode (`/workspace/legged_lab/source/legged_lab`)

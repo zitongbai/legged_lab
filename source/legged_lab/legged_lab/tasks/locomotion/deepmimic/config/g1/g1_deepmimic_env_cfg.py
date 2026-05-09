@@ -34,7 +34,7 @@ class G1DeepMimicEnvCfg(DeepMimicEnvCfg):
         self.scene.robot = UNITREE_G1_29DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_DATA_DIR, "MotionData", "g1_29dof", "deepmimic"
+            LEGGED_LAB_DATA_DIR, "legged_lab/unitree_g1/deepmimic"
         )
         self.motion_data.motion_dataset.motion_data_weights = {
             "G5_-__back_kick_stageii": 1.0,

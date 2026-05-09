@@ -51,7 +51,7 @@ def ang_vel_from_quat_diff(
 
     if method == "central" and N >= 3:
         q_prev = quat[:-2]  # (N-2, 4)
-        q_next = quat[2:]   # (N-2, 4)
+        q_next = quat[2:]  # (N-2, 4)
         step = 2.0 * dt
         # diff_quat is in q_prev body frame
         diff_quat = math_utils.quat_mul(math_utils.quat_conjugate(q_prev), q_next)
@@ -63,7 +63,7 @@ def ang_vel_from_quat_diff(
     else:
         # forward diff (or N==2 fallback)
         q_prev = quat[:-1]  # (N-1, 4)
-        q_next = quat[1:]   # (N-1, 4)
+        q_next = quat[1:]  # (N-1, 4)
         diff_quat = math_utils.quat_mul(math_utils.quat_conjugate(q_prev), q_next)
         omega = math_utils.axis_angle_from_quat(diff_quat) / dt  # (N-1, 3)
         if in_frame == "world":

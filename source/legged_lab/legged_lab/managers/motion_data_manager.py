@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 import numpy as np
+import os
 import torch
 from prettytable import PrettyTable
 from typing import TYPE_CHECKING
@@ -84,8 +84,7 @@ class MotionDataTerm(ManagerTermBase):
                 self.body_names = file_body_names
             elif self.body_names != file_body_names:
                 raise ValueError(
-                    f"body_names mismatch in {motion_file}. "
-                    f"Expected {self.body_names}, got {file_body_names}."
+                    f"body_names mismatch in {motion_file}. Expected {self.body_names}, got {file_body_names}."
                 )
 
             self.motion_durations.append(duration)

@@ -25,6 +25,19 @@ resolve_path() {
 
 RSL_RL_HOST_PATH="$(resolve_path "${RSL_RL_PATH:-../../rsl_rl}" "${SCRIPT_DIR}")"
 CACHE_HOST_ROOT="${HOME}/docker/isaac-sim"
+GIT_METADATA_VOLUME=()
+
+if [[ -z "${LEGGED_LAB_DATA_DIR:-}" ]]; then
+    echo "LEGGED_LAB_DATA_DIR is not set. Please set it to the host datasets directory before starting Docker." >&2
+    exit 1
+fi
+
+if [[ ! -d "${LEGGED_LAB_DATA_DIR}" ]]; then
+    echo "LEGGED_LAB_DATA_DIR does not point to an existing directory: ${LEGGED_LAB_DATA_DIR}" >&2
+    exit 1
+fi
+
+DATASETS_HOST_PATH="$(cd "${LEGGED_LAB_DATA_DIR}" && pwd -P)"
 
 if [[ ! -d "${RSL_RL_HOST_PATH}" ]]; then
     echo "RSL_RL_PATH does not point to an existing directory: ${RSL_RL_HOST_PATH}" >&2
@@ -33,12 +46,22 @@ fi
 
 RSL_RL_HOST_PATH="$(cd "${RSL_RL_HOST_PATH}" && pwd -P)"
 
-DATASETS_HOST_PATH="$(resolve_path "${DATASETS_PATH:-../../datasets}" "${SCRIPT_DIR}")"
+if [[ -f "${REPO_ROOT}/.git" ]]; then
+    GITDIR_LINE="$(sed -n 's/^gitdir: //p' "${REPO_ROOT}/.git")"
 
-if [[ ! -d "${DATASETS_HOST_PATH}" ]]; then
-    echo "WARNING: DATASETS_PATH does not point to an existing directory: ${DATASETS_HOST_PATH} — skipping datasets mount." >&2
-else
-    DATASETS_HOST_PATH="$(cd "${DATASETS_HOST_PATH}" && pwd -P)"
+    if [[ "${GITDIR_LINE}" == ../.git/modules/* ]]; then
+        GIT_METADATA_HOST_PATH="$(cd "${REPO_ROOT}/.." && pwd -P)/.git"
+
+        if [[ ! -d "${GIT_METADATA_HOST_PATH}" ]]; then
+            echo "Git metadata directory does not exist: ${GIT_METADATA_HOST_PATH}" >&2
+            exit 1
+        fi
+
+        GIT_METADATA_VOLUME=(--volume "${GIT_METADATA_HOST_PATH}:/workspace/.git:rw")
+    elif [[ -n "${GITDIR_LINE}" ]]; then
+        echo "Unsupported .git gitdir layout for Docker workflow: ${GITDIR_LINE}" >&2
+        exit 1
+    fi
 fi
 
 mkdir -p \
@@ -66,6 +89,8 @@ DOCKER_ARGS=(
     --workdir /workspace/legged_lab
     --volume "${REPO_ROOT}:/workspace/legged_lab"
     --volume "${RSL_RL_HOST_PATH}:/workspace/rsl_rl"
+    --volume "${DATASETS_HOST_PATH}:/workspace/datasets:rw"
+    "${GIT_METADATA_VOLUME[@]}"
     --volume "${CACHE_HOST_ROOT}/cache/kit:/isaac-sim/kit/cache:rw"
     --volume "${CACHE_HOST_ROOT}/cache/ov:/root/.cache/ov:rw"
     --volume "${CACHE_HOST_ROOT}/cache/pip:/root/.cache/pip:rw"
@@ -77,6 +102,7 @@ DOCKER_ARGS=(
     --env OMNI_KIT_ALLOW_ROOT=1
     --env ACCEPT_EULA=Y
     --env PRIVACY_CONSENT=Y
+    --env LEGGED_LAB_DATA_DIR=/workspace/datasets
     --env "DISPLAY=${DISPLAY:-}"
     --env "HTTP_PROXY=${HTTP_PROXY:-}"
     --env "HTTPS_PROXY=${HTTPS_PROXY:-}"
@@ -88,10 +114,6 @@ DOCKER_ARGS=(
 
 if [[ -f "${HOME}/.Xauthority" ]]; then
     DOCKER_ARGS+=(--volume "${HOME}/.Xauthority:/root/.Xauthority")
-fi
-
-if [[ -d "${DATASETS_HOST_PATH}" ]]; then
-    DOCKER_ARGS+=(--volume "${DATASETS_HOST_PATH}:/workspace/datasets:rw")
 fi
 
 docker run "${DOCKER_ARGS[@]}" "${LEGGED_LAB_IMAGE}" -lc '
