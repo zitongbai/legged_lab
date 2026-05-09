@@ -5,52 +5,70 @@ from typing import Optional
 import isaaclab.utils.math as math_utils
 
 
-@torch.jit.script
-def vel_forward_diff(data: torch.Tensor, dt: float) -> torch.Tensor:
-    """Compute the forward differences of the input data
+def vel_forward_diff(data: torch.Tensor, dt: float, method: str = "central") -> torch.Tensor:
+    """Compute velocity by finite differences of the input data.
 
     Args:
-        data (torch.Tensor): The input data tensor of shape (N, dim).
-        dt (float): The time step duration.
+        data (torch.Tensor): Shape (N, ...).
+        dt (float): Time step duration.
+        method (str): "central" (default, O(dt²)) or "forward" (O(dt)).
     """
     N = data.shape[0]
     if N < 2:
         raise RuntimeError(f"Input data has only {N} frames, cannot compute velocity.")
     vel = torch.zeros_like(data)
-    vel[:-1] = (data[1:] - data[:-1]) / dt
-    vel[-1] = vel[-2]  # use the last value as the same as the second last value
+    if method == "central":
+        if N >= 3:
+            vel[1:-1] = (data[2:] - data[:-2]) / (2.0 * dt)
+        vel[0] = vel[1] if N >= 3 else (data[1] - data[0]) / dt
+        vel[-1] = vel[-2]
+    else:  # forward
+        vel[:-1] = (data[1:] - data[:-1]) / dt
+        vel[-1] = vel[-2]
     return vel
 
 
-@torch.jit.script
-def ang_vel_from_quat_diff(quat: torch.Tensor, dt: float, in_frame: str = "body") -> torch.Tensor:
-    """Compute the angular velocity from quaternion differences.
+def ang_vel_from_quat_diff(
+    quat: torch.Tensor, dt: float, in_frame: str = "body", method: str = "central"
+) -> torch.Tensor:
+    """Compute angular velocity from quaternion differences (vectorized).
+
+    Uses q_prev⁻¹ * q_next to get the relative rotation in the body frame at q_prev,
+    then optionally rotates to world frame.
 
     Args:
-        quat (torch.Tensor): The input quaternion tensor of shape (N, 4),
-                            representing the rotation from world to body frame.
-        dt (float): The time step duration.
-        in_frame (str): The frame in which the angular velocity is expressed, either "body" or "world".
+        quat (torch.Tensor): Shape (N, 4), wxyz, representing world-to-body rotation.
+        dt (float): Time step duration.
+        in_frame (str): "body" (default) or "world".
+        method (str): "central" (default, O(dt²)) or "forward" (O(dt)).
     """
-    if in_frame not in ["body", "world"]:
-        raise ValueError(f"Invalid in_frame value: {in_frame}. Must be 'body' or 'world'.")
+    if in_frame not in ("body", "world"):
+        raise ValueError(f"in_frame must be 'body' or 'world', got '{in_frame}'.")
 
     N = quat.shape[0]
     if N < 2:
         raise RuntimeError(f"Input quaternion has only {N} frames, cannot compute angular velocity.")
 
-    ang_vel = torch.zeros((N, 3), dtype=torch.float32, device=quat.device)
-    for i in range(N - 1):
-        q1 = quat[i].unsqueeze(0)  # from world frame to body, shape (1, 4)
-        q2 = quat[i + 1].unsqueeze(0)  # from world frame to body (at next time), shape (1, 4)
-
-        diff_quat = math_utils.quat_mul(math_utils.quat_conjugate(q1), q2)
-        diff_angle_axis = math_utils.axis_angle_from_quat(diff_quat)
+    if method == "central" and N >= 3:
+        q_prev = quat[:-2]  # (N-2, 4)
+        q_next = quat[2:]   # (N-2, 4)
+        step = 2.0 * dt
+        # diff_quat is in q_prev body frame
+        diff_quat = math_utils.quat_mul(math_utils.quat_conjugate(q_prev), q_next)
+        omega_mid = math_utils.axis_angle_from_quat(diff_quat) / step  # (N-2, 3)
         if in_frame == "world":
-            diff_angle_axis = math_utils.quat_apply(q1, diff_angle_axis)
-        ang_vel[i, :] = diff_angle_axis.squeeze() / dt  # convert to angular velocity
-
-    ang_vel[-1, :] = ang_vel[-2, :]  # use the last value as the same as the second last value
+            omega_mid = math_utils.quat_apply(q_prev, omega_mid)
+        # pad first and last frame
+        ang_vel = torch.cat([omega_mid[:1], omega_mid, omega_mid[-1:]], dim=0)
+    else:
+        # forward diff (or N==2 fallback)
+        q_prev = quat[:-1]  # (N-1, 4)
+        q_next = quat[1:]   # (N-1, 4)
+        diff_quat = math_utils.quat_mul(math_utils.quat_conjugate(q_prev), q_next)
+        omega = math_utils.axis_angle_from_quat(diff_quat) / dt  # (N-1, 3)
+        if in_frame == "world":
+            omega = math_utils.quat_apply(q_prev, omega)
+        ang_vel = torch.cat([omega, omega[-1:]], dim=0)
 
     return ang_vel
 
