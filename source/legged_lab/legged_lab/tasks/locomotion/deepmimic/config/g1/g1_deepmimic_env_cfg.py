@@ -39,6 +39,7 @@ class G1DeepMimicEnvCfg(DeepMimicEnvCfg):
         self.motion_data.motion_dataset.motion_data_weights = {
             "G5_-__back_kick_stageii": 1.0,
         }
+        self.motion_data.motion_dataset.key_body_names = list(KEY_BODY_NAMES)
 
         # -----------------------------------------------------
         # Observations

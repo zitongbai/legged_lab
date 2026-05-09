@@ -115,6 +115,7 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
             LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "amp", "walk_and_run"
         )
+        self.motion_data.motion_dataset.key_body_names = list(KEY_BODY_NAMES)
         self.motion_data.motion_dataset.motion_data_weights = {
             "B10_-__Walk_turn_left_45_stageii": 1.0,
             "B11_-__Walk_turn_left_135_stageii": 1.0,
