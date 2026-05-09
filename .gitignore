@@ -36,6 +36,11 @@ _repo
 _build
 .lastformat
 
+# Motion data (copyrighted, not tracked)
+source/legged_lab/legged_lab/data/MotionData/**
+!source/legged_lab/legged_lab/data/MotionData/
+!source/legged_lab/legged_lab/data/MotionData/**/
+
 # Temp folders
 **/temp/
 **/tmp/

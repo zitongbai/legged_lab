@@ -6,7 +6,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 
 import legged_lab.tasks.locomotion.amp.mdp as mdp
-from legged_lab import LEGGED_LAB_ROOT_DIR
+from legged_lab import LEGGED_LAB_DATA_DIR
 
 ##
 # Pre-defined configs
@@ -113,7 +113,7 @@ class G1AmpEnvCfg(LocomotionAmpEnvCfg):
         # motion data
         # ------------------------------------------------------
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "amp", "walk_and_run"
+            LEGGED_LAB_DATA_DIR, "MotionData", "g1_29dof", "amp", "walk_and_run"
         )
         self.motion_data.motion_dataset.key_body_names = list(KEY_BODY_NAMES)
         self.motion_data.motion_dataset.motion_data_weights = {

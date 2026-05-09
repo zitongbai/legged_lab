@@ -3,7 +3,7 @@ import os
 import isaaclab.sim as sim_utils
 from isaaclab.utils import configclass
 
-from legged_lab import LEGGED_LAB_ROOT_DIR
+from legged_lab import LEGGED_LAB_DATA_DIR
 
 ##
 # Pre-defined configs
@@ -26,7 +26,7 @@ class G1AnimEnvCfg(AnimationEnvCfg):
         )
 
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "deepmimic"
+            LEGGED_LAB_DATA_DIR, "MotionData", "g1_29dof", "deepmimic"
         )
         self.motion_data.motion_dataset.motion_data_weights = {
             "C4_-_run_to_walk_a_stageii": 1.0,
