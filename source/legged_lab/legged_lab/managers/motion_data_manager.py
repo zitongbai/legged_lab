@@ -215,7 +215,13 @@ class MotionDataTerm(ManagerTermBase):
 
         return frame_idx0, frame_idx1, blend
 
-    def get_motion_state(self, motion_ids: torch.Tensor, motion_times: torch.Tensor) -> dict[str, torch.Tensor]:
+    def get_motion_state(
+        self,
+        motion_ids: torch.Tensor,
+        motion_times: torch.Tensor,
+        body_indices: list[int] | torch.Tensor | None = None,
+        include_full_body: bool = False,
+    ) -> dict[str, torch.Tensor]:
         frame_idx0, frame_idx1, blend = self._calc_frame_blend(motion_ids, motion_times)
 
         root_quat_0 = self.root_quat[frame_idx0]
@@ -243,7 +249,7 @@ class MotionDataTerm(ManagerTermBase):
             key_body_pos_w - root_pos_w.unsqueeze(1),
         )
 
-        return {
+        motion_state = {
             "root_pos_w": root_pos_w,
             "root_quat": root_quat,
             "root_vel_w": root_vel_w,
@@ -254,6 +260,35 @@ class MotionDataTerm(ManagerTermBase):
             "dof_vel": dof_vel,
             "key_body_pos_b": key_body_pos_b,
         }
+
+        if include_full_body:
+            if body_indices is None:
+                body_indices = slice(None)
+            body_quat_0 = self.body_quat_w[frame_idx0][:, body_indices, :]
+            body_quat_1 = self.body_quat_w[frame_idx1][:, body_indices, :]
+
+            motion_state.update(
+                {
+                    "body_pos_w": torch.lerp(
+                        self.body_pos_w[frame_idx0][:, body_indices, :],
+                        self.body_pos_w[frame_idx1][:, body_indices, :],
+                        blend_3d,
+                    ),
+                    "body_quat_w": quat_slerp(q0=body_quat_0, q1=body_quat_1, blend=blend),
+                    "body_lin_vel_w": torch.lerp(
+                        self.body_lin_vel_w[frame_idx0][:, body_indices, :],
+                        self.body_lin_vel_w[frame_idx1][:, body_indices, :],
+                        blend_3d,
+                    ),
+                    "body_ang_vel_w": torch.lerp(
+                        self.body_ang_vel_w[frame_idx0][:, body_indices, :],
+                        self.body_ang_vel_w[frame_idx1][:, body_indices, :],
+                        blend_3d,
+                    ),
+                }
+            )
+
+        return motion_state
 
 
 class MotionDataManager(ManagerBase):
