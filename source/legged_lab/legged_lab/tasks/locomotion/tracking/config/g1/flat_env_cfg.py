@@ -3,7 +3,7 @@ from __future__ import annotations
 from isaaclab.utils import configclass
 
 from legged_lab import LEGGED_LAB_DATA_DIR
-from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG
+from legged_lab.assets.unitree import G1_BEYONDMIMIC_ACTION_SCALE, UNITREE_G1_29DOF_BEYONDMIMIC_CFG
 from legged_lab.tasks.locomotion.tracking.tracking_env_cfg import TrackingEnvCfg
 
 
@@ -41,36 +41,7 @@ END_EFFECTOR_BODY_NAMES = [
 ]
 
 MOTION_DATA_WEIGHTS = {
-    "B10_-__Walk_turn_left_45_stageii": 1.0,
-    "B11_-__Walk_turn_left_135_stageii": 1.0,
-    "B13_-__Walk_turn_right_90_stageii": 1.0,
-    "B14_-__Walk_turn_right_45_t2_stageii": 1.0,
-    "B15_-__Walk_turn_around_stageii": 1.0,
-    "B22_-__side_step_left_stageii": 1.0,
-    "B23_-__side_step_right_stageii": 1.0,
-    "B4_-_Stand_to_Walk_backwards_stageii": 1.0,
-    "B9_-__Walk_turn_left_90_stageii": 1.0,
-    "C11_-_run_turn_left_90_stageii": 1.0,
-    "C12_-_run_turn_left_45_stageii": 1.0,
-    "C13_-_run_turn_left_135_stageii": 1.0,
-    "C14_-_run_turn_right_90_stageii": 1.0,
-    "C15_-_run_turn_right_45_stageii": 1.0,
-    "C16_-_run_turn_right_135_stageii": 1.0,
-    "C17_-_run_change_direction_stageii": 1.0,
-    "C1_-_stand_to_run_stageii": 1.0,
-    "C3_-_run_stageii": 1.0,
-    "C4_-_run_to_walk_a_stageii": 1.0,
-    "C5_-_walk_to_run_stageii": 1.0,
-    "C6_-_stand_to_run_backwards_stageii": 1.0,
-    "C8_-_run_backwards_to_stand_stageii": 1.0,
-    "C9_-_run_backwards_turn_run_forward_stageii": 1.0,
-    "Walk_B10_-_Walk_turn_left_45_stageii": 1.0,
-    "Walk_B13_-_Walk_turn_right_45_stageii": 1.0,
-    "Walk_B15_-_Walk_turn_around_stageii": 1.0,
-    "Walk_B16_-_Walk_turn_change_stageii": 1.0,
-    "Walk_B22_-_Side_step_left_stageii": 1.0,
-    "Walk_B23_-_Side_step_right_stageii": 1.0,
-    "Walk_B4_-_Stand_to_Walk_Back_stageii": 1.0,
+    "Form_1_stageii": 1.0,
 }
 
 
@@ -81,10 +52,10 @@ class G1TrackingEnvCfg(TrackingEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.scene.robot = UNITREE_G1_29DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        self.actions.joint_pos.scale = 0.5
+        self.scene.robot = UNITREE_G1_29DOF_BEYONDMIMIC_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.actions.joint_pos.scale = G1_BEYONDMIMIC_ACTION_SCALE
 
-        self.motion_data.motion_dataset.motion_data_dir = f"{LEGGED_LAB_DATA_DIR}/legged_lab/unitree_g1/amp"
+        self.motion_data.motion_dataset.motion_data_dir = f"{LEGGED_LAB_DATA_DIR}/legged_lab/unitree_g1/AMASS/ACCAD/Male2MartialArtsExtended_c3d/"
         self.motion_data.motion_dataset.key_body_names = list(KEY_BODY_NAMES)
         self.motion_data.motion_dataset.motion_data_weights = dict(MOTION_DATA_WEIGHTS)
 
