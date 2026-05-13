@@ -363,6 +363,9 @@ class MotionTrackingCommand(CommandTerm):
 
     def _update_command(self):
         self.motion_times += self._env.step_dt
+        finished_env_ids = torch.where(self.motion_times >= self.motion_durations)[0]
+        if len(finished_env_ids) > 0:
+            self._resample_command(finished_env_ids)
         self._update_reference_state()
 
     def _set_debug_vis_impl(self, debug_vis: bool):

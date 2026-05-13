@@ -241,7 +241,6 @@ class TerminationsCfg:
     """Termination terms for motion tracking."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    motion_finished = DoneTerm(func=mdp.motion_finished, params={"command_name": "motion"})
     anchor_pos = DoneTerm(func=mdp.bad_anchor_pos_z_only, params={"command_name": "motion", "threshold": 0.25})
     anchor_ori = DoneTerm(
         func=mdp.bad_anchor_ori,
