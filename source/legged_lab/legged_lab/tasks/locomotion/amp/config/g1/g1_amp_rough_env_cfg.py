@@ -352,7 +352,7 @@ class G1AmpRoughEnvCfg_PLAY(G1AmpRoughEnvCfg):
 
         self.commands.base_velocity.ranges.lin_vel_x = (1.5, 3.0)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
+        self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         self.commands.base_velocity.ranges.heading =  (-math.pi, math.pi)
 
         # disable randomization for play
