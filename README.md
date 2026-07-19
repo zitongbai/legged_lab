@@ -353,6 +353,43 @@ On a remote machine, forward the Viser port to your local browser, e.g.
 
 </details>
 
+
+#### 🎬 Animation (motion replay)
+
+The Animation task (`LeggedLab-Isaac-Animation-G1-v0`) is a **pure motion-data replay** —
+there is no policy and no training. Every step the robot is kinematically posed directly
+from the motion data (gravity/collision disabled), which is handy for visually inspecting
+retargeted reference motion before using it for AMP / DeepMimic. Because there is no policy
+to load, it runs with a **zero-action agent** (`scripts/zero_agent.py`) instead of `play.py` —
+no `--checkpoint` is needed.
+
+<details>
+<summary>Replay / Visualize</summary>
+
+The motion dataset to replay is set by `MotionDataCfg` in
+`source/legged_lab/legged_lab/tasks/locomotion/animation/config/g1/g1_anim_env_cfg.py`.
+
+**Mode 1 — Kit viewport (`--viz kit`).** Opens the Isaac Sim viewport; red spheres mark
+the reference key-body positions:
+
+```bash
+python scripts/zero_agent.py --task LeggedLab-Isaac-Animation-G1-v0 \
+    --num_envs 16 --viz kit
+```
+
+**Mode 2 — interactive Viser (`--viz viser`).** Serves a live 3D view over HTTP — open the
+printed URL in a browser (no display needed). Do not pass `--headless` in this mode:
+
+```bash
+python scripts/zero_agent.py --task LeggedLab-Isaac-Animation-G1-v0 \
+    --num_envs 16 --viz viser
+```
+
+On a remote machine, forward the Viser port to your local browser, e.g.
+`ssh -L 8080:localhost:8080 <host>`.
+
+</details>
+
 <a id="roadmap"></a>
 ## 🗺️ Roadmap
 

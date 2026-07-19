@@ -183,21 +183,29 @@ class AnimationTerm(ManagerTermBase):
         root_quat = self.root_quat_buffer[:, 0, :]  # (num_envs, 4)
         dof_pos = self.dof_pos_buffer[:, 0, :]  # (num_envs, num_dofs)
 
-        root_states = robot_anim.data.default_root_state.clone()
-        root_states[:, :3] = root_pos_w + self._env.scene.env_origins[:, :3] + self.vis_root_offset
-        root_states[:, 3:7] = root_quat
-        root_states[:, 7:10] = 0.0  # zero linear velocity
-        root_states[:, 10:13] = 0.0  # zero angular velocity
-        robot_anim.write_root_state_to_sim(root_states)
+        # v3: build the root pose tensor explicitly instead of cloning the deprecated
+        # `default_root_state` ProxyArray. Mirrors deepmimic.mdp.events.reset_from_ref: the
+        # v3.0 asset layer returns warp-backed ProxyArrays (implicit `.clone()`/slice-assign
+        # only work through a deprecation bridge) and `default_root_state` is itself deprecated
+        # in favour of default_root_pose/default_root_vel. root_quat is XYZW (v3 convention),
+        # already converted from the .pkl's WXYZ in MotionDataManager.
+        root_pos = root_pos_w + self._env.scene.env_origins[:, :3] + self.vis_root_offset  # (num_envs, 3)
+        root_pose = torch.cat([root_pos, root_quat], dim=-1)  # (num_envs, 7): pos + XYZW quat
+        robot_anim.write_root_pose_to_sim(root_pose)
 
-        joint_pos = robot_anim.data.default_joint_pos.clone()
-        joint_pos[:, :] = dof_pos
-        joint_vel = torch.zeros_like(robot_anim.data.default_joint_vel)
-        robot_anim.write_joint_state_to_sim(joint_pos, joint_vel)
+        # Zero root velocity so the (gravity-disabled) anim robot never integrates drift between
+        # renders. v3 root-velocity layout is [ang_vel(3), lin_vel(3)] — moot here since all zeros.
+        root_vel = torch.zeros((self.num_envs, 6), device=self._env.device, dtype=torch.float32)
+        robot_anim.write_root_velocity_to_sim(root_vel)
+
+        # dof_pos is already in the articulation's joint order; write it directly (the old code
+        # cloned default_joint_pos then overwrote it entirely). joint_vel is zeroed.
+        joint_vel = torch.zeros_like(dof_pos)
+        robot_anim.write_joint_state_to_sim(dof_pos, joint_vel)
 
         key_body_pos_b = self.key_body_pos_b_buffer[:, 0, :, :]  # (num_envs, num_key_bodies, 3)
         num_key_bodies = key_body_pos_b.shape[1]
-        key_body_pos_w = root_states[:, :3].unsqueeze(1) + math_utils.quat_apply(
+        key_body_pos_w = root_pos.unsqueeze(1) + math_utils.quat_apply(
             root_quat.unsqueeze(1).expand(-1, num_key_bodies, -1), key_body_pos_b
         )
         self.key_body_marker.visualize(translations=key_body_pos_w.reshape(-1, 3))
