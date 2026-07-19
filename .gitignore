@@ -45,7 +45,7 @@ _build
 .agents/.local.env
 
 # Batch experiment machine-local config
-scripts/experiments/env.local.sh
+scripts/env.local.sh
 
 # Interactive launcher: last-used selections
 scripts/launch/.launch_last.json

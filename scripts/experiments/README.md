@@ -6,11 +6,13 @@ across the GPUs on a single machine. Each run goes into its own tmux session.
 ## One-time setup
 
 Machine-specific settings (Python env path, proxy) are **not** hard-coded in
-the scripts. Copy the template and fill it in for your machine:
+the scripts. They live one level up in `scripts/` so both the interactive
+launcher (`scripts/launch/`) and these batch scripts share one config. Copy the
+template and fill it in for your machine:
 
 ```bash
-cp scripts/experiments/env.local.sh.example scripts/experiments/env.local.sh
-$EDITOR scripts/experiments/env.local.sh
+cp scripts/env.local.sh.example scripts/env.local.sh
+$EDITOR scripts/env.local.sh
 ```
 
 `env.local.sh` is git-ignored. Fill in:

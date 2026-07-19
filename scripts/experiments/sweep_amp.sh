@@ -9,7 +9,7 @@
 #
 # Machine-specific info (Python env, proxy) is NOT hard-coded here. It is read
 # from a local, git-ignored config file so this script stays portable/open:
-#   scripts/experiments/env.local.sh   (copy from env.local.sh.example)
+#   scripts/env.local.sh   (copy from env.local.sh.example)
 # Every setting can also be overridden via an environment variable.
 #
 # Usage:
@@ -44,7 +44,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 
 # --- load machine-local config (does not override already-set env vars) ----
-LOCAL_ENV="${SCRIPT_DIR}/env.local.sh"
+LOCAL_ENV="${REPO_ROOT}/scripts/env.local.sh"
 if [[ -f "${LOCAL_ENV}" ]]; then
   # shellcheck disable=SC1090
   source "${LOCAL_ENV}"
@@ -61,7 +61,7 @@ PROXY_URL="${PROXY_URL:-}"
 # --- validate machine config ----------------------------------------------
 if [[ -z "${VENV_ACTIVATE}" ]]; then
   echo "ERROR: VENV_ACTIVATE is not set." >&2
-  echo "       Copy env.local.sh.example -> env.local.sh and fill it in," >&2
+  echo "       Copy scripts/env.local.sh.example -> scripts/env.local.sh and fill it in," >&2
   echo "       or pass it inline: VENV_ACTIVATE=/path/bin/activate $0 ..." >&2
   exit 1
 fi

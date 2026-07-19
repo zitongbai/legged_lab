@@ -3,7 +3,7 @@
 The tmux path mirrors ``scripts/experiments/sweep_amp.sh``:
 
 * machine-local config (venv activate path + optional proxy) is read from
-  ``scripts/experiments/env.local.sh`` — never hard-coded here;
+  ``scripts/env.local.sh`` — never hard-coded here;
 * each run gets its own tmux session named after the run;
 * the pane sources the venv, exports the proxy, runs the command, tees output
   to a log, and holds open with ``read`` so failures stay visible.
@@ -23,8 +23,8 @@ from rich.syntax import Syntax
 from .command import to_shell_string
 from .discovery import REPO_ROOT
 
-ENV_LOCAL = os.path.join(REPO_ROOT, "scripts", "experiments", "env.local.sh")
-ENV_LOCAL_EXAMPLE = os.path.join(REPO_ROOT, "scripts", "experiments", "env.local.sh.example")
+ENV_LOCAL = os.path.join(REPO_ROOT, "scripts", "env.local.sh")
+ENV_LOCAL_EXAMPLE = os.path.join(REPO_ROOT, "scripts", "env.local.sh.example")
 
 
 # --- command printing -------------------------------------------------------
@@ -96,10 +96,10 @@ def get_env_config(console: Console | None = None) -> dict[str, str] | None:
     if not os.path.isfile(ENV_LOCAL):
         console.print(
             Panel(
-                "[yellow]scripts/experiments/env.local.sh not found.[/]\n"
+                "[yellow]scripts/env.local.sh not found.[/]\n"
                 "The tmux launcher sources it to activate your Python env (and optional proxy).\n\n"
                 "Create it from the template:\n"
-                "    [cyan]cp scripts/experiments/env.local.sh.example scripts/experiments/env.local.sh[/]\n"
+                "    [cyan]cp scripts/env.local.sh.example scripts/env.local.sh[/]\n"
                 "then set [cyan]VENV_ACTIVATE[/] (and optionally [cyan]PROXY_URL[/]).",
                 title="Missing env.local.sh",
                 border_style="yellow",
